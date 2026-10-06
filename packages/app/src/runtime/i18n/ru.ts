@@ -1,4 +1,18 @@
 export const dict = {
+  "lama.status.up": "Работает",
+  "lama.status.slow": "Отвечает медленно",
+  "lama.status.down": "Недоступна",
+  "lama.status.unknown": "Нет свежих данных",
+  "lama.checked": "Проверено: {{time}}",
+  "lama.input": "Вход",
+  "lama.output": "Выход",
+  "lama.cacheRead": "Чтение кэша",
+  "lama.cacheWrite": "Запись кэша",
+  "lama.cacheWriteHour": "Запись кэша · 1 час",
+  "lama.pricesUnavailable": "Цены недоступны",
+  "lama.priceUnit": "Цены API за 1 млн токенов",
+  "lama.priceSummary": "Вход {{input}} · Выход {{output}} / 1 млн",
+
   "provider.connect.models.title": "LAMA подключена",
   "provider.connect.models.description": "Выберите модель для начала работы. Её можно сменить в любой момент.",
   "provider.connect.models.available": "Доступные модели",

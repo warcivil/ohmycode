@@ -1,3 +1,4 @@
+import { LamaStatusDot } from "@/providers/models/lama-details"
 import { Show, createMemo } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Button } from "@opencode/ui/button"
@@ -79,6 +80,7 @@ function ComposerModelControl(props: {
           />
         )}
       </Show>
+      <LamaStatusDot model={props.model.current()?.id ?? ""} provider={props.provider?.id} />
       <span class="truncate leading-4">{props.modelName}</span>
       <span class="-ml-0.5 -mr-1 flex shrink-0">
         <Icon name="chevron-down" />

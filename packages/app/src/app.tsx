@@ -1,3 +1,4 @@
+import { LamaCatalogProvider } from "@/providers/models/lama-catalog"
 import "@/index.css"
 import { DialogProvider } from "@opencode/ui/context/dialog"
 import { FileComponentProvider } from "@opencode/ui/context/file"
@@ -70,11 +71,13 @@ export function AppBaseProviders(
               }}
             >
               <QueryProvider>
-                <DialogProvider>
-                  <ExtensionRoot>
-                    <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
-                  </ExtensionRoot>
-                </DialogProvider>
+                <LamaCatalogProvider>
+                  <DialogProvider>
+                    <ExtensionRoot>
+                      <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
+                    </ExtensionRoot>
+                  </DialogProvider>
+                </LamaCatalogProvider>
               </QueryProvider>
             </ErrorBoundary>
           </UiI18nBridge>

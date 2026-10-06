@@ -1,6 +1,20 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "lama.status.up": "Online",
+  "lama.status.slow": "Slow",
+  "lama.status.down": "Unavailable",
+  "lama.status.unknown": "No recent data",
+  "lama.checked": "Checked: {{time}}",
+  "lama.input": "Input",
+  "lama.output": "Output",
+  "lama.cacheRead": "Cache read",
+  "lama.cacheWrite": "Cache write",
+  "lama.cacheWriteHour": "Cache write · 1 hour",
+  "lama.pricesUnavailable": "Prices unavailable",
+  "lama.priceUnit": "API prices per 1M tokens",
+  "lama.priceSummary": "In {{input}} · Out {{output}} / 1M",
+
   ...DESKTOP_NATIVE_ENGLISH,
   "session.location.unavailable": "Session location unavailable",
   "session.location.description": "Choose another directory to continue this session.",

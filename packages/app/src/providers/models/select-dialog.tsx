@@ -1,3 +1,4 @@
+import { LamaPrices, LamaStatusDot } from "./lama-details"
 import { Popover } from "@kobalte/core/popover"
 import { Component, ComponentProps, createEffect, createMemo, For, JSX, Show, Suspense, lazy, on } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -161,7 +162,10 @@ const ModelList: Component<{
                       <ModelTooltip model={item} latest={item.latest} free={isFree(item.provider.id, item.cost)} v2 />
                     }
                   >
-                    <span class="min-w-0 truncate">{item.name}</span>
+                    <span class="flex min-w-0 items-center gap-2">
+                      <LamaStatusDot model={item.id} provider={item.provider.id} />
+                      <span class="truncate">{item.name}</span>
+                    </span>
                   </Tooltip>
                   <Show when={isFree(item.provider.id, item.cost)}>
                     <Badge class="shrink-0">{language.t("model.tag.free")}</Badge>
@@ -170,6 +174,7 @@ const ModelList: Component<{
                     <Badge class="shrink-0">{language.t("model.tag.latest")}</Badge>
                   </Show>
                 </div>
+                <LamaPrices model={item.id} provider={item.provider.id} detailed={props.mobile} />
               </div>
               <div data-slot="settings-row-control" class="size-4">
                 <Show when={controller.current() === modelKey(item)}>
@@ -606,7 +611,7 @@ export function ModelSelectorPopoverView(props: {
       <Menu.Portal>
         <Menu.Content
           ref={(element: HTMLDivElement) => (contentRef = element)}
-          class="w-[284px] max-w-[calc(100vw-16px)] overflow-hidden rounded-md border-0 bg-v2-background-bg-layer-01 !p-0 shadow-[var(--v2-elevation-floating)] focus:outline-none"
+          class="w-[360px] max-w-[calc(100vw-16px)] overflow-hidden rounded-md border-0 bg-v2-background-bg-layer-01 !p-0 shadow-[var(--v2-elevation-floating)] focus:outline-none"
           classList={{ "!w-[320px]": props.chatgptPlan }}
           onPointerDownOutside={dismiss.preventTriggerRestore}
           onFocusOutside={dismiss.preventTriggerRestore}
@@ -711,7 +716,7 @@ export function ModelSelectorPopoverView(props: {
                                 value={modelKey(item)}
                                 data-option-key={modelKey(item)}
                                 data-selected-model={props.current === modelKey(item) ? true : undefined}
-                                class="scroll-my-6 w-full"
+                                class="scroll-my-6 w-full !h-auto min-h-12"
                                 classList={{ "!bg-v2-overlay-simple-overlay-hover": store.active === modelKey(item) }}
                                 onMouseEnter={() => {
                                   setStore("active", modelKey(item))
@@ -719,7 +724,11 @@ export function ModelSelectorPopoverView(props: {
                                 }}
                                 onSelect={() => selectModel(item)}
                               >
-                                <span class="min-w-0 truncate leading-5">{item.name}</span>
+                                <LamaStatusDot model={item.id} provider={item.provider.id} />
+                                <span class="min-w-0 flex-1 py-1">
+                                  <span class="block truncate leading-5">{item.name}</span>
+                                  <LamaPrices model={item.id} provider={item.provider.id} />
+                                </span>
                                 <Show when={isFree(item.provider.id, item.cost)}>
                                   <Badge class="shrink-0">{language.t("model.tag.free")}</Badge>
                                 </Show>
