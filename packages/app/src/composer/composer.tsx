@@ -1,3 +1,4 @@
+import { LamaAccountControl } from "@/providers/models/lama-account"
 import { LamaStatusDot } from "@/providers/models/lama-details"
 import { Show, createMemo } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
@@ -52,6 +53,7 @@ export function Composer(props: {
           />
         }
       />
+      <LamaAccountControl provider={props.model.model.selection.current()?.provider.id} />
     </div>
   )
 }

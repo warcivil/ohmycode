@@ -1,3 +1,4 @@
+import { Rpc } from "@opencode/core/rpc"
 import { expect, test } from "bun:test"
 import { Effect, Schedule } from "effect"
 import { Credential } from "@opencode/core/credential"
@@ -49,15 +50,13 @@ it.live("website login stores the issued key as a native credential", () =>
         const integrations = yield* Integration.Service
         const attempt = yield* integrations.oauth.connect({ integrationID, methodID })
         expect(attempt.url).toStartWith("https://ohmylama.ru/desktop/connect#code=")
-        const result = yield* integrations.oauth
-          .status({ integrationID, attemptID: attempt.attemptID })
-          .pipe(
-            Effect.repeat({
-              until: (value) => value.status !== "pending",
-              schedule: Schedule.spaced("100 millis"),
-              times: 60,
-            }),
-          )
+        const result = yield* integrations.oauth.status({ integrationID, attemptID: attempt.attemptID }).pipe(
+          Effect.repeat({
+            until: (value) => value.status !== "pending",
+            schedule: Schedule.spaced("100 millis"),
+            times: 60,
+          }),
+        )
         expect(result.status).toBe("complete")
         const credentials = yield* Credential.Service
         const saved = yield* credentials.list(integrationID)
@@ -65,6 +64,72 @@ it.live("website login stores the issued key as a native credential", () =>
         expect(calls).toEqual([
           "https://ohmylama.ru/api/desktop-auth/start",
           "https://ohmylama.ru/api/desktop-auth/token",
+        ])
+      }),
+    ({ original }) =>
+      Effect.sync(() => {
+        globalThis.fetch = original
+      }),
+  ),
+)
+
+it.live("account RPC uses the active credential and never returns its secret", () =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const original = globalThis.fetch
+      const authorization: string[] = []
+      const replies = [
+        Response.json({ balance: "12.34", currency: "RUB" }),
+        Response.json({ balance: "0.00", currency: "RUB" }),
+        new Response(null, { status: 401 }),
+        new Response(null, { status: 503 }),
+      ]
+      globalThis.fetch = Object.assign(
+        async (input: string | URL | Request, init?: RequestInit) => {
+          expect(String(input)).toBe("https://ohmylama.ru/v1/account")
+          authorization.push(new Headers(init?.headers).get("Authorization") ?? "")
+          return replies.shift() ?? new Response(null, { status: 500 })
+        },
+        { preconnect: original.preconnect },
+      )
+      return { original, authorization }
+    }),
+    ({ authorization }) =>
+      Effect.gen(function* () {
+        const plugin = yield* Plugin.Service
+        yield* LamaPlugin.effect(yield* PluginHost.make(plugin))
+        const rpc = yield* Rpc.Service
+        const credentials = yield* Credential.Service
+        const first = yield* credentials.create({
+          integrationID,
+          label: "first",
+          value: Credential.Key.make({ type: "key", key: "sk-lama-first" }),
+        })
+        expect(yield* rpc.call("ohmycode.account", "get", {})).toEqual({
+          status: "ready",
+          balance: 12.34,
+          currency: "RUB",
+        })
+        yield* credentials.create({
+          integrationID,
+          label: "second",
+          value: Credential.OAuth.make({
+            type: "oauth",
+            methodID,
+            access: "sk-lama-second",
+            refresh: "",
+            expires: 8640000000000000,
+          }),
+        })
+        expect(yield* rpc.call("ohmycode.account", "get", {})).toEqual({ status: "ready", balance: 0, currency: "RUB" })
+        yield* credentials.activate(first.id)
+        expect(yield* rpc.call("ohmycode.account", "get", {})).toEqual({ status: "invalid-key" })
+        expect(yield* rpc.call("ohmycode.account", "get", {})).toEqual({ status: "unavailable" })
+        expect(authorization).toEqual([
+          "Bearer sk-lama-first",
+          "Bearer sk-lama-second",
+          "Bearer sk-lama-first",
+          "Bearer sk-lama-first",
         ])
       }),
     ({ original }) =>

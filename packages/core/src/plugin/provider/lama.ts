@@ -1,3 +1,4 @@
+import { LamaAccountRpc } from "@opencode/schema/lama-account"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Effect, Schema } from "effect"
 import { Credential } from "../../credential.js"
@@ -48,6 +49,39 @@ export function lamaModels() {
 export const LamaPlugin = define({
   id: "ohmycode.provider.lama",
   effect: Effect.fn(function* (ctx) {
+    const credentials = yield* Credential.Service
+    yield* ctx.rpc
+      .register(LamaAccountRpc, {
+        get: () =>
+          Effect.gen(function* () {
+            const saved = (yield* credentials.list(Integration.ID.make(providerID))).at(-1)?.value
+            const key =
+              saved?.type === "key" ? saved.key : saved?.type === "oauth" ? saved.access : process.env.LAMA_API_KEY
+            if (!key) return { status: "disconnected" as const }
+            const response = yield* Effect.tryPromise(() =>
+              fetch(`${root}/v1/account`, {
+                headers: { Authorization: `Bearer ${key}` },
+                signal: AbortSignal.timeout(10_000),
+              }),
+            )
+            if (response.status === 401) return { status: "invalid-key" as const }
+            if (response.status === 403) return { status: "blocked" as const }
+            if (!response.ok) return { status: "unavailable" as const }
+            const data = yield* Effect.tryPromise(() => response.json()).pipe(
+              Effect.flatMap(
+                Schema.decodeUnknownEffect(
+                  Schema.Struct({
+                    balance: Schema.NumberFromString,
+                    currency: Schema.Literal("RUB"),
+                  }),
+                ),
+              ),
+            )
+            if (!Number.isFinite(data.balance)) return { status: "unavailable" as const }
+            return { status: "ready" as const, ...data }
+          }).pipe(Effect.catch(() => Effect.succeed({ status: "unavailable" as const }))),
+      })
+      .pipe(Effect.orDie)
     yield* ctx.integration.transform((editor) => {
       for (const integration of editor.list()) if (integration.id !== providerID) editor.remove(integration.id)
       editor.update(providerID, (integration) => {

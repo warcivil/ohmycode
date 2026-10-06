@@ -1,4 +1,14 @@
 export const dict = {
+  "lama.account.loading": "Загрузка баланса…",
+  "lama.account.unavailable": "Баланс недоступен",
+  "lama.account.disconnected": "Войдите в LAMA",
+  "lama.account.invalid-key": "API-ключ отозван или неверен",
+  "lama.account.blocked": "Аккаунт заблокирован",
+  "lama.account.balance": "API-баланс: {{amount}}",
+  "lama.account.note": "Используется API-баланс. Подписка на чат не расходуется.",
+  "lama.account.refresh": "Обновить баланс",
+  "lama.account.topup": "Пополнить",
+
   "lama.status.up": "Работает",
   "lama.status.slow": "Отвечает медленно",
   "lama.status.down": "Недоступна",

@@ -49,3 +49,5 @@ The installed ordinary OpenCode profile is not migrated or modified.
 Russian is the initial UI language. An explicit saved language choice wins.
 Upstream automatic updates are disabled until an OhMyCode release feed exists.
 This is a local preview, not a signed cross-platform release.
+
+API balance is fetched through the native `ohmycode.account` RPC using the selected LAMA credential. `/v1/account` authenticates without increasing the key request counter. The composer refreshes the balance every 30 seconds and on window focus; top-ups open `https://ohmylama.ru/subscription#topup`. The key is never returned to the renderer by this RPC.

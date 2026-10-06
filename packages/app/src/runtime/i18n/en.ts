@@ -1,6 +1,16 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "lama.account.loading": "Loading balance…",
+  "lama.account.unavailable": "Balance unavailable",
+  "lama.account.disconnected": "Sign in to LAMA",
+  "lama.account.invalid-key": "API key revoked or invalid",
+  "lama.account.blocked": "Account blocked",
+  "lama.account.balance": "API balance: {{amount}}",
+  "lama.account.note": "Uses your API balance. Chat subscription is not consumed.",
+  "lama.account.refresh": "Refresh balance",
+  "lama.account.topup": "Top up",
+
   "lama.status.up": "Online",
   "lama.status.slow": "Slow",
   "lama.status.down": "Unavailable",
