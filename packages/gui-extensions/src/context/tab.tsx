@@ -1,3 +1,4 @@
+import { createLamaMoney } from "./lama-money"
 import { createMemo, on, onCleanup, For, Show } from "solid-js"
 import type { JSX } from "solid-js"
 import { checksum } from "@opencode/util/encode"
@@ -100,13 +101,7 @@ export default function SessionContextTab(props: { session: MountedSession }) {
     { equals: same },
   )
 
-  const usd = createMemo(
-    () =>
-      new Intl.NumberFormat(i18n.locale(), {
-        style: "currency",
-        currency: "USD",
-      }),
-  )
+  const usd = createLamaMoney(i18n.locale)
 
   const context = createMemo(() => {
     const message = messages().findLast((item) => item.type === "assistant" && !!item.tokens)

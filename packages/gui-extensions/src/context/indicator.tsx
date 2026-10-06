@@ -1,3 +1,4 @@
+import { createLamaMoney } from "./lama-money"
 import { Show, createMemo, type ComponentProps, type JSX } from "solid-js"
 import { ProgressCircle } from "@opencode/ui/progress-circle"
 import { IconButton } from "@opencode/ui/icon-button"
@@ -35,13 +36,7 @@ export function SessionContextUsage(props: {
     props.session.id ? props.session.server.data.session.get(props.session.id) : undefined,
   )
 
-  const usd = createMemo(
-    () =>
-      new Intl.NumberFormat(i18n.locale(), {
-        style: "currency",
-        currency: "USD",
-      }),
-  )
+  const usd = createLamaMoney(i18n.locale)
 
   const context = createMemo(() => {
     const message = messages().findLast((item) => item.type === "assistant" && !!item.tokens)

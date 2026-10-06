@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import { chmod, copyFile, mkdtemp, rm } from "node:fs/promises"
+import { chmod, copyFile, mkdtemp, rename, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 
@@ -102,7 +102,9 @@ export async function copyBuiltCliToResources(root: string, dest = windowsify("r
 // 200 MB binary on first launch.
 async function copyCliToResources(pkg: string, dest: string) {
   const cli = getCurrentCli()
-  await copyFile(join(pkg, "bin", cli.os === "win32" ? "opencode.exe" : "opencode"), dest)
+  const pending = `${dest}.pending`
+  await copyFile(join(pkg, "bin", cli.os === "win32" ? "opencode.exe" : "opencode"), pending)
+  await rename(pending, dest)
   await prepareCli(dest)
   const manifest = (await Bun.file(join(pkg, "package.json")).json()) as { version?: string }
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { mkdirSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { enableCompileCache } from "node:module"
 import { homedir, tmpdir } from "node:os"
 import path from "node:path"
@@ -36,6 +36,21 @@ export function configureApplication() {
     app.setPath("sessionData", path.join(testRoot, "session"))
 
     if (testOnboarding) app.setPath("documents", path.join(testRoot, "documents"))
+  }
+
+  // OhMyCode owns its config, credentials and server state.
+  for (const kind of ["DATA", "CONFIG", "CACHE", "STATE"] as const) {
+    const directory = path.join(app.getPath("userData"), kind.toLowerCase())
+    mkdirSync(directory, { recursive: true })
+    process.env[`XDG_${kind}_HOME`] = directory
+  }
+
+  const serviceDirectory = path.join(process.env.XDG_CONFIG_HOME!, "opencode")
+  const serviceFile = path.join(serviceDirectory, "service.json")
+  mkdirSync(serviceDirectory, { recursive: true })
+  if (!existsSync(serviceFile)) {
+    const port = APP_ID.endsWith(".dev") ? 49474 : APP_ID.endsWith(".beta") ? 49475 : 49476
+    writeFileSync(serviceFile, JSON.stringify({ port }), { mode: 0o600 })
   }
 
   // V8 bytecode for the main bundle survives between launches, like the renderer's code cache.

@@ -1,5 +1,10 @@
 export const dict = {
-  "desktop.menu.app": "OpenCode",
+  "provider.connect.models.title": "LAMA подключена",
+  "provider.connect.models.description": "Выберите модель для начала работы. Её можно сменить в любой момент.",
+  "provider.connect.models.available": "Доступные модели",
+  "provider.connect.models.list": "Модели {{provider}}",
+
+  "desktop.menu.app": "OhMyCode",
   "desktop.menu.file": "Файл",
   "desktop.menu.edit": "Правка",
   "desktop.menu.view": "Вид",
@@ -405,8 +410,7 @@ export const dict = {
   "home.sessions.group.today": "Сегодня",
   "home.sessions.group.yesterday": "Вчера",
   "home.sessions.group.older": "Ранее",
-  "home.providerTip":
-    "Подключитесь к более чем 75 провайдерам, чтобы использовать другие модели, включая Claude, GPT, Gemini и другие",
+  "home.providerTip": "Войдите в аккаунт LAMA, чтобы выбрать модель и начать работу",
 
   "session.tab.session": "Сессия",
   "session.tab.unknown": "Неизвестная сессия",
