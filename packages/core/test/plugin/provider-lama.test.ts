@@ -20,6 +20,21 @@ test("LAMA catalog includes images, tools, Grok, and retail costs", () => {
   expect(models.every((m) => m.cost.length > 0 && m.cost[0].input > 0 && m.cost[0].output > 0)).toBe(true)
 })
 
+test("LAMA exposes manufacturer windows separately from the compaction threshold", () => {
+  const models = lamaModels()
+  expect(models.every((model) => model.limit.context > 0 && model.limit.output > 0)).toBe(true)
+  for (const [id, context, output] of [
+    ["gpt-6.1-sol", 1_050_000, 128_000],
+    ["claude-opus-5.5", 1_000_000, 128_000],
+    ["claude-haiku-4.5", 200_000, 64_000],
+    ["grok-4.7", 500_000, 500_000],
+    ["gemini-3.8-flash", 1_048_576, 65_536],
+    ["minimax-m2.5", 196_608, 204_800],
+  ] as const) {
+    expect(models.find((model) => model.id === id)?.limit).toMatchObject({ context, output })
+  }
+})
+
 it.live("website login stores the issued key as a native credential", () =>
   Effect.acquireUseRelease(
     Effect.sync(() => {

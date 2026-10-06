@@ -97,6 +97,8 @@ const SHRINK_STEPS = [0.7, 0.5, 0.35]
 const RESERVE_MIN = 16_000
 /** A common window size, assumed for the compaction request when the model's window is unknown. */
 const UNKNOWN_WINDOW = 200_000
+/** LAMA compacts large histories before reaching the model's full context window. */
+const LAMA_AUTO_THRESHOLD = 200_000
 const TOOL_OUTPUT_MAX_CHARS = 1_250
 const IMAGE_TOKEN_ESTIMATE = 1_500
 const PDF_TOKEN_ESTIMATE = 2_000
@@ -208,8 +210,10 @@ export const layer = Layer.effect(
 
       // Only the user compacts when automatic compaction is off, overflow included.
       if (trigger.reason !== "manual" && !settings.auto) return { status: "skipped" }
-      if (trigger.reason === "auto" && !due(context, calculateCeiling(context.model.limit, settings.buffer)))
-        return { status: "skipped" }
+      const safeCeiling = calculateCeiling(context.model.limit, settings.buffer)
+      const autoCeiling =
+        context.model.ref.providerID === "ohmylama" ? Math.min(LAMA_AUTO_THRESHOLD, safeCeiling) : safeCeiling
+      if (trigger.reason === "auto" && !due(context, autoCeiling)) return { status: "skipped" }
       const native = context.model.compaction?.type === "native"
       const agent = native ? undefined : yield* agents.get(Agent.ID.make("compaction"))
       const model =

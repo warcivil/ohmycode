@@ -23,6 +23,7 @@ const Token = Schema.Struct({ api_key: Schema.String.check(Schema.isPattern(/^sk
 
 export function lamaModels() {
   const prices: Record<string, number[]> = catalog.prices
+  const limits: Record<string, Model.Info["limit"]> = catalog.limits
   return catalog.models.map((id) => {
     const prefix = Object.keys(prices)
       .filter((key) => id.startsWith(key))
@@ -32,7 +33,7 @@ export function lamaModels() {
     return {
       ...Model.Info.default(providerID, Model.ID.make(id)),
       name: id,
-      limit: { context: 131072, output: 16384 },
+      limit: { ...limits[id] },
       cost: price
         ? [
             {

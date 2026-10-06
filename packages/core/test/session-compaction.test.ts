@@ -205,6 +205,27 @@ it.effect("auto compaction estimates current content against the buffered prompt
     const due = (context: SessionContext.Loaded) =>
       compaction.compact({ reason: "auto", context }).pipe(Effect.map((outcome) => outcome.status !== "skipped"))
 
+    // LAMA's automatic threshold is independent of the published model window.
+    // Smaller windows and explicit input limits still retain the existing reply reserve.
+    for (const [tokens, limit, expected] of [
+      [199_999, { context: 1_000_000, output: 128_000 }, false],
+      [200_000, { context: 1_000_000, output: 128_000 }, true],
+      [179_999, { context: 200_000, output: 64_000 }, false],
+      [180_000, { context: 200_000, output: 64_000 }, true],
+      [83_999, { context: 1_000_000, input: 100_000, output: 64_000 }, false],
+      [84_000, { context: 1_000_000, input: 100_000, output: 64_000 }, true],
+    ] as const) {
+      const selected = input(tokens, limit)
+      const lama = Provider.ID.make("ohmylama")
+      expect(
+        yield* due({
+          ...selected,
+          model: { ...selected.model, ref: { ...selected.model.ref, providerID: lama } },
+          messages: selected.messages.map((message) => ({ ...message, model: { ...message.model, providerID: lama } })),
+        }),
+      ).toBe(expected)
+    }
+
     // 90% of the input limit, which takes precedence over the context window.
     const inputLimited = { context: 400_000, input: 272_000, output: 128_000 }
     expect(yield* due(input(244_799, inputLimited))).toBe(false)
