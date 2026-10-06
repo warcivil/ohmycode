@@ -10,9 +10,28 @@ export function createMarkdownParser(highlight: (code: string, language: string)
 
 const inlineParenMathRegex = /^\\\(((?:\\.|[^\\\n])*?)\\\)/
 
+const unescapedDollarRegex = /(?:^|[^\\])\$/
+
 // marked-katex-extension handles `$...$`, `$$...$$`, and `$$` fenced blocks; it has no `\(...\)` syntax.
 export const markdownMath: MarkedExtension[] = [
-  markedKatex({ throwOnError: false }),
+  {
+    extensions: markedKatex({ throwOnError: false }).extensions?.map((extension) => {
+      if (!("level" in extension) || extension.level !== "inline") return extension
+
+      return {
+        ...extension,
+        tokenizer(src, tokens) {
+          const token = extension.tokenizer.call(this, src, tokens)
+
+          // The package lets inline math contain `$`, so "Pay $5 now, or $x$ later" would become one formula
+          // starting at the price. Rejecting it leaves the price as text and lets `$x$` match on its own.
+          if (token && unescapedDollarRegex.test(token.text)) return
+
+          return token
+        },
+      }
+    }),
+  },
   {
     extensions: [
       {

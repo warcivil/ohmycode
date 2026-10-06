@@ -43,6 +43,19 @@ test.each([
   expect(await parser.parse(text)).not.toContain("katex")
 })
 
+test("keeps a price as text when math follows on the same line", async () => {
+  const html = await parser.parse("Pay $5 now, or $x$ later")
+  expect(html).toContain("$5 now, or ")
+  expect(html.match(/<span class="katex">/g)).toHaveLength(1)
+  expect(html).not.toContain("katex-error")
+})
+
+test("renders escaped dollars inside math", async () => {
+  const html = await parser.parse("The fee is $\\$5$ today")
+  expect(html).toContain('<span class="katex">')
+  expect(html).not.toContain("katex-error")
+})
+
 // marked-katex-extension requires a space or line start before `$` and a space or punctuation after the closing `$`.
 test.each(["where (i.e. $x$) holds", "the $x$-axis", "因此$x^2$是正数"])(
   "leaves tight dollar math as text: %s",
