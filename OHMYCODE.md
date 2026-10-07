@@ -40,6 +40,8 @@ available. Billing by the LAMA service remains authoritative.
 
 ## Isolation and updates
 
+Ubuntu installation and `.deb` build instructions: [INSTALL-UBUNTU.md](INSTALL-UBUNTU.md).
+
 Desktop identities are `ru.ohmylama.ohmycode.dev`, `.beta` and
 `ru.ohmylama.ohmycode`. Data, config, cache and service state live inside the
 respective desktop profile. Default managed-service ports are 49474 (dev),
@@ -67,3 +69,29 @@ Manufacturer limits were checked on 2026-10-06. Sources for the catalog snapshot
 - MiniMax: [M3](https://www.minimax.io/models/text/m3) advertises up to 1M context (512k guaranteed); [API output limits](https://platform.minimax.io/docs/api-reference/text-chat-openai) are 524,288 for M3 and 204,800 for M2.x. Manufacturer configurations give [M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7/blob/main/config.json) 204,800 context and [M2.5](https://huggingface.co/MiniMaxAI/MiniMax-M2.5/blob/main/config.json) 196,608. Output is additionally constrained by remaining context in Core.
 
 These are manufacturer ceilings as authorized for our provider routes, not claims that a million-token request was sent through each route. The regular Core per-request output cap (256,000 tokens) still applies.
+
+## Generation error notifications
+
+Terminal provider failures show actionable notifications for insufficient API
+balance, invalid credentials, denied access, request limits, context overflow,
+model availability and connection interruptions. The focused app shows one toast;
+background system alerts follow the existing notification setting. Intermediate
+retries do not notify. Top-up opens the LAMA balance page; other notices open the
+failed chat. Technical errors stay in the transcript, and unknown/tool/policy
+errors keep the existing presentation. A repeated terminal event is shown once.
+
+Russian copy was reviewed separately against the maintained
+[VS Code Russian corpus](https://github.com/microsoft/vscode-loc/blob/main/i18n/vscode-language-pack-ru/translations/main.i18n.json)
+and [Firefox Russian network errors](https://github.com/mozilla-l10n/firefox-l10n/blob/main/ru/toolkit/toolkit/neterror/netError.ftl).
+“API-баланс” and “сжать историю” retain the existing LAMA product vocabulary;
+no plural-sensitive phrases were added. No regional variants are required.
+
+## Windows installer
+
+The separate `OhMyCode Windows installer` workflow builds on `windows-2025`.
+Pushes to `windows-installer` run it automatically; it also supports manual
+dispatch. It builds the Windows CLI from this checkout, packages NSIS, verifies
+a silent installation and an authenticated `/api/info` response from the installed
+server, and uploads `ohmycode-windows-x64` with the `.exe`, installation notes and
+SHA-256 checksum. It does not publish a release or require provider keys/signing
+credentials. Local Windows x64 builds use `bun run package:ohmycode:win`.

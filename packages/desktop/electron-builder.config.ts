@@ -60,109 +60,140 @@ const APP_IDS = {
   prod: "ru.ohmylama.ohmycode",
 } as const
 
-const getBase = (appId: string): Configuration => ({
-  artifactName: "ohmycode-${os}-${arch}.${ext}",
-  directories: {
-    output: "dist",
-    buildResources: "resources",
-  },
-  // Linux launchers are .desktop files, so this is the desktop file name,
-  // not just the app id. For prod, app id "ru.ohmylama.ohmycode" becomes
-  // "ru.ohmylama.ohmycode.desktop".
-  // https://developer.gnome.org/documentation/guidelines/maintainer/integrating.html
-  // https://www.electron.build/docs/linux/
-  extraMetadata: {
+const getBase = (appId: string): Configuration => {
+  const extraMetadata: Configuration["extraMetadata"] = {
     desktopName: `${appId}.desktop`,
-  },
-  files: [
-    "out/**/*",
-    "resources/**/*",
-    "!resources/opencode-cli*",
-    // Log export imports Zip.js as ESM. Keep index.js and lib, including its inline worker.
-    "!**/node_modules/@zip.js/zip.js/dist{,/**/*}",
-    "!**/node_modules/@zip.js/zip.js/{index.cjs,index.min.js,index-fflate.js,deno.json,eslint.config.mjs}",
-    // Nothing executes type declarations or source maps, and every entry costs startup time: the
-    // main process parses the whole asar header before it runs any JavaScript.
-    "!**/node_modules/**/*.d.{ts,cts,mts}",
-    "!**/node_modules/**/*.d.{ts,cts,mts}.map",
-    "!**/node_modules/**/*.{js,cjs,mjs}.map",
-    // These packages execute compiled JavaScript, not their sources.
-    "!**/node_modules/ajv/lib{,/**/*}",
-    "!**/node_modules/ajv-formats/src{,/**/*}",
-    // Keep js-yaml's CommonJS sources and dist/js-yaml.mjs ESM entry, not browser bundles or its CLI.
-    "!**/node_modules/js-yaml/dist/{js-yaml.js,js-yaml.min.js,*.map}",
-    "!**/node_modules/js-yaml/bin{,/**/*}",
-  ],
-  extraResources: [
-    {
-      from: "resources/",
-      to: "",
-      filter: ["opencode-cli", "opencode-cli.exe", "opencode-cli.version"],
-    },
-  ],
-  afterPack: async (context) => {
-    const cli = path.join(
-      context.packager.getResourcesDir(context.appOutDir),
-      context.electronPlatformName === "win32" ? "opencode-cli.exe" : "opencode-cli",
-    )
+    homepage: "https://github.com/warcivil/ohmycode",
+    description: "OhMyCode — desktop coding agent powered by LAMA, based on OpenCode",
+  }
 
-    const file = await stat(cli)
+  if (process.env.OPENCODE_VERSION) extraMetadata.version = process.env.OPENCODE_VERSION
 
-    if (!file.isFile() || file.size === 0) throw new Error(`Bundled CLI must be a non-empty file: ${cli}`)
-    const version = path.join(path.dirname(cli), "opencode-cli.version")
-
-    if ((await stat(version)).size === 0) throw new Error(`Bundled CLI version must be a non-empty file: ${version}`)
-  },
-  mac: {
-    category: "public.app-category.developer-tools",
-    icon: `resources/icons/icon.icns`,
-    extendInfo: {
-      NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
+  return {
+    artifactName: `ohmycode-${channel}-\${version}-\${os}-\${arch}.\${ext}`,
+    directories: {
+      output: "dist",
+      buildResources: "resources",
     },
-    hardenedRuntime: true,
-    gatekeeperAssess: false,
-    entitlements: "resources/entitlements.plist",
-    entitlementsInherit: "resources/entitlements.plist",
-    sign: async (options) => {
-      const { sign } = await import("app-builder-lib/out/codeSign/macCodeSign")
-      await sign(macSignOptions(options))
-    },
-    notarize: true,
-    target: ["dmg", "zip"],
-  },
-  protocols: {
-    name: "OhMyCode",
-    schemes: ["ohmycode"],
-  },
-  win: {
-    icon: `resources/icons/icon.ico`,
-    signtoolOptions: {
-      sign: signWindows,
-    },
-    target: ["nsis"],
-    verifyUpdateCodeSignature: false,
-  },
-  nsis: {
-    include: path.join(packageDir, "resources", "windows", "installer.nsh"),
-    oneClick: true,
-    perMachine: false,
-    installerIcon: `resources/icons/icon.ico`,
-    installerHeaderIcon: `resources/icons/icon.ico`,
-  },
-  linux: {
-    icon: `resources/icons`,
-    category: "Development",
-    executableName: appId,
-    desktop: {
-      entry: {
-        // Match the installed .desktop file and hicolor icon basename so
-        // Linux shells can associate the running Electron window with its launcher.
-        StartupWMClass: appId,
+    // Linux launchers are .desktop files, so this is the desktop file name,
+    // not just the app id. For prod, app id "ru.ohmylama.ohmycode" becomes
+    // "ru.ohmylama.ohmycode.desktop".
+    // https://developer.gnome.org/documentation/guidelines/maintainer/integrating.html
+    // https://www.electron.build/docs/linux/
+    extraMetadata,
+    files: [
+      "out/**/*",
+      "resources/**/*",
+      "!resources/opencode-cli*",
+      // Log export imports Zip.js as ESM. Keep index.js and lib, including its inline worker.
+      "!**/node_modules/@zip.js/zip.js/dist{,/**/*}",
+      "!**/node_modules/@zip.js/zip.js/{index.cjs,index.min.js,index-fflate.js,deno.json,eslint.config.mjs}",
+      // Nothing executes type declarations or source maps, and every entry costs startup time: the
+      // main process parses the whole asar header before it runs any JavaScript.
+      "!**/node_modules/**/*.d.{ts,cts,mts}",
+      "!**/node_modules/**/*.d.{ts,cts,mts}.map",
+      "!**/node_modules/**/*.{js,cjs,mjs}.map",
+      // These packages execute compiled JavaScript, not their sources.
+      "!**/node_modules/ajv/lib{,/**/*}",
+      "!**/node_modules/ajv-formats/src{,/**/*}",
+      // Keep js-yaml's CommonJS sources and dist/js-yaml.mjs ESM entry, not browser bundles or its CLI.
+      "!**/node_modules/js-yaml/dist/{js-yaml.js,js-yaml.min.js,*.map}",
+      "!**/node_modules/js-yaml/bin{,/**/*}",
+    ],
+    extraResources: [
+      { from: path.join(rootDir, "LICENSE"), to: "LICENSE.OpenCode" },
+      {
+        from: "resources/",
+        to: "",
+        filter: ["opencode-cli", "opencode-cli.exe", "opencode-cli.version"],
       },
+    ],
+    afterPack: async (context) => {
+      const cli = path.join(
+        context.packager.getResourcesDir(context.appOutDir),
+        context.electronPlatformName === "win32" ? "opencode-cli.exe" : "opencode-cli",
+      )
+
+      const file = await stat(cli)
+
+      if (!file.isFile() || file.size === 0) throw new Error(`Bundled CLI must be a non-empty file: ${cli}`)
+      const version = path.join(path.dirname(cli), "opencode-cli.version")
+
+      if ((await stat(version)).size === 0) throw new Error(`Bundled CLI version must be a non-empty file: ${version}`)
     },
-    target: ["AppImage", "deb", "rpm"],
-  },
-})
+    mac: {
+      category: "public.app-category.developer-tools",
+      icon: `resources/icons/icon.icns`,
+      extendInfo: {
+        NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
+      },
+      hardenedRuntime: true,
+      gatekeeperAssess: false,
+      entitlements: "resources/entitlements.plist",
+      entitlementsInherit: "resources/entitlements.plist",
+      sign: async (options) => {
+        const { sign } = await import("app-builder-lib/out/codeSign/macCodeSign")
+        await sign(macSignOptions(options))
+      },
+      notarize: true,
+      target: ["dmg", "zip"],
+    },
+    protocols: {
+      name: "OhMyCode",
+      schemes: ["ohmycode"],
+    },
+    deb: {
+      packageName: channel === "prod" ? "ohmycode" : `ohmycode-${channel}`,
+      afterInstall: path.join(packageDir, "resources/linux/after-install.tpl"),
+      compression: "gz",
+      depends: [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libasound2",
+      ],
+      fpm: [metainfoFpm(appId)],
+    },
+    win: {
+      icon: `resources/icons/icon.ico`,
+      signtoolOptions: {
+        sign: signWindows,
+      },
+      target: ["nsis"],
+      verifyUpdateCodeSignature: false,
+    },
+    nsis: {
+      include: path.join(packageDir, "resources", "windows", "installer.nsh"),
+      oneClick: true,
+      perMachine: false,
+      installerIcon: `resources/icons/icon.ico`,
+      installerHeaderIcon: `resources/icons/icon.ico`,
+    },
+    linux: {
+      maintainer: "OhMyLama",
+      vendor: "OhMyLama",
+      description: "OhMyCode — desktop coding agent powered by LAMA, based on OpenCode",
+      icon: `resources/icons`,
+      category: "Development",
+      executableName: appId,
+      desktop: {
+        entry: {
+          Name: { prod: "OhMyCode", beta: "OhMyCode Beta", dev: "OhMyCode Dev" }[channel],
+          // Match the installed .desktop file and hicolor icon basename so
+          // Linux shells can associate the running Electron window with its launcher.
+          StartupWMClass: appId,
+        },
+      },
+      target: ["AppImage", "deb", "rpm"],
+    },
+  }
+}
 
 function getConfig() {
   const appId = APP_IDS[channel]
@@ -173,8 +204,7 @@ function getConfig() {
       return {
         ...base,
         appId,
-        productName: "OhMyCode Dev",
-        deb: { fpm: [metainfoFpm(appId)] },
+        productName: "OhMyCodeDev",
         rpm: { packageName: "ohmycode-dev", fpm: [metainfoFpm(appId)] },
       }
     }
@@ -183,9 +213,8 @@ function getConfig() {
       return {
         ...base,
         appId,
-        productName: "OhMyCode Beta",
+        productName: "OhMyCodeBeta",
         protocols: { name: "OhMyCode Beta", schemes: ["ohmycode"] },
-        deb: { fpm: [metainfoFpm(appId)] },
         rpm: { packageName: "ohmycode-beta", fpm: [metainfoFpm(appId)] },
       }
     }
@@ -196,7 +225,6 @@ function getConfig() {
         appId,
         productName: "OhMyCode",
         protocols: { name: "OhMyCode", schemes: ["ohmycode"] },
-        deb: { fpm: [metainfoFpm(appId)] },
         rpm: { packageName: "ohmycode", fpm: [metainfoFpm(appId)] },
       }
     }

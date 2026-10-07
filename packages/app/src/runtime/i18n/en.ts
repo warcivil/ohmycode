@@ -1,6 +1,28 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "lama.error.balance.title": "Not enough API balance",
+  "lama.error.balance.description":
+    "Top up your LAMA API balance, then try again. Your chat subscription does not cover API requests.",
+  "lama.error.auth.title": "LAMA connection needs updating",
+  "lama.error.auth.description":
+    "Your API key is invalid or revoked. Sign in to LAMA again or enter a new key in provider settings.",
+  "lama.error.blocked.title": "Access denied",
+  "lama.error.blocked.description":
+    "LAMA denied this request. Check your account access or contact support with the error details from this chat.",
+  "lama.error.rate-limit.title": "Request limit reached",
+  "lama.error.rate-limit.description":
+    "Wait a little, then try again. If this keeps happening, check the limits on your API key.",
+  "lama.error.context.title": "The conversation is too long",
+  "lama.error.context.description":
+    "Compact the conversation, remove large attachments, or choose a model with a larger context window, then try again.",
+  "lama.error.unavailable.title": "Model unavailable",
+  "lama.error.unavailable.description":
+    "Choose another model or try again later. Error details are available in this chat.",
+  "lama.error.connection.title": "The response was interrupted",
+  "lama.error.connection.description":
+    "Check your connection, then try again. If part of the answer was saved, ask the model to continue.",
+  "lama.error.openChat": "Open chat",
   "lama.account.loading": "Loading balance…",
   "lama.account.unavailable": "Balance unavailable",
   "lama.account.disconnected": "Sign in to LAMA",
