@@ -39,7 +39,9 @@ jobs:
         working-directory: packages/desktop
         run: bun test electron-builder.config.test.ts
       - name: Build Windows x64 installer
-        run: bun run package:ohmycode:win
+        run: |
+          bun run package:ohmycode:win 2>&1 | Tee-Object "$env:RUNNER_TEMP/ohmycode-build.log"
+          if ($LASTEXITCODE -ne 0) { throw "Windows build failed with exit code $LASTEXITCODE" }
       - name: Verify installation and bundled server
         run: |
           $ErrorActionPreference = 'Stop'
@@ -85,3 +87,13 @@ jobs:
             packages/desktop/dist/SHA256SUMS-WINDOWS.txt
           if-no-files-found: error
           retention-days: 30
+      - name: Upload build diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ohmycode-windows-diagnostics
+          path: |
+            ${{ runner.temp }}/ohmycode-build.log
+            ${{ runner.temp }}/server.stderr.log
+          if-no-files-found: ignore
+          retention-days: 7

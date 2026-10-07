@@ -21,7 +21,7 @@ const installer = Bun.file(join(dist, name))
 if (!(await installer.exists()) || installer.size === 0) throw new Error(`Windows installer missing: ${name}`)
 
 const sha256 = createHash("sha256")
-  .update(await installer.arrayBuffer())
+  .update(new Uint8Array(await installer.arrayBuffer()))
   .digest("hex")
 await Bun.write(join(dist, "SHA256SUMS-WINDOWS.txt"), `${sha256}  ${name}\n`)
 await Bun.write(
