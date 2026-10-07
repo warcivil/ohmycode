@@ -45,37 +45,43 @@ jobs:
       - name: Verify installation and bundled server
         run: |
           $ErrorActionPreference = 'Stop'
-          $installer = @(Get-ChildItem packages/desktop/dist/ohmycode-dev-*-win-x64.exe)
-          if ($installer.Count -ne 1) { throw 'Expected exactly one Windows installer' }
-          $installDir = Join-Path $env:RUNNER_TEMP 'OhMyCodeSmoke'
-          $install = Start-Process -FilePath $installer[0].FullName -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
-          if ($install.ExitCode -ne 0) { throw "Installer failed with exit code $($install.ExitCode)" }
-          $cli = Join-Path $installDir 'resources/opencode-cli.exe'
-          $version = (Get-Content (Join-Path $installDir 'resources/opencode-cli.version') -Raw).Trim()
-          if (!(Test-Path $cli)) { throw 'Installed CLI missing' }
-          $actual = (& $cli --version | Out-String).Trim()
-          if ($LASTEXITCODE -ne 0 -or $actual -ne $version) { throw 'Installed CLI version mismatch' }
-          $env:OPENCODE_CLIENT = 'ohmycode-windows-smoke'
-          $env:OPENCODE_PASSWORD = [Guid]::NewGuid().ToString('N')
-          Write-Output "::add-mask::$env:OPENCODE_PASSWORD"
-          $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$env:OPENCODE_PASSWORD"))
-          $server = Start-Process -FilePath $cli -ArgumentList 'serve', '--hostname', '127.0.0.1', '--port', '49587' -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/server.stdout.log" -RedirectStandardError "$env:RUNNER_TEMP/server.stderr.log"
           try {
-            $ready = $false
-            for ($attempt = 0; $attempt -lt 30; $attempt++) {
-              if ($server.HasExited) { throw 'Installed server exited before becoming ready' }
-              try {
-                $info = Invoke-RestMethod 'http://127.0.0.1:49587/api/info' -Headers @{ Authorization = "Basic $auth" } -TimeoutSec 2
-                if ($info.version -ne $version) { throw 'Server version mismatch' }
-                $ready = $true
-                break
-              } catch { Start-Sleep -Seconds 1 }
+            $installer = @(Get-ChildItem packages/desktop/dist/ohmycode-dev-*-win-x64.exe)
+            if ($installer.Count -ne 1) { throw 'Expected exactly one Windows installer' }
+            $installDir = Join-Path $env:RUNNER_TEMP 'OhMyCodeSmoke'
+            $install = Start-Process -FilePath $installer[0].FullName -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+            if ($install.ExitCode -ne 0) { throw "Installer failed with exit code $($install.ExitCode)" }
+            $cli = Join-Path $installDir 'resources/opencode-cli.exe'
+            $version = (Get-Content (Join-Path $installDir 'resources/opencode-cli.version') -Raw).Trim()
+            if (!(Test-Path $cli)) { throw 'Installed CLI missing' }
+            $actual = (& $cli --version | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or $actual -ne "opencode v$version") { throw "Installed CLI version mismatch: expected 'opencode v$version', got '$actual'" }
+            $env:OPENCODE_CLIENT = 'ohmycode-windows-smoke'
+            $env:OPENCODE_PASSWORD = [Guid]::NewGuid().ToString('N')
+            Write-Output "::add-mask::$env:OPENCODE_PASSWORD"
+            $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$env:OPENCODE_PASSWORD"))
+            $server = Start-Process -FilePath $cli -ArgumentList 'serve', '--hostname', '127.0.0.1', '--port', '49587' -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/server.stdout.log" -RedirectStandardError "$env:RUNNER_TEMP/server.stderr.log"
+            try {
+              $ready = $false
+              for ($attempt = 0; $attempt -lt 30; $attempt++) {
+                if ($server.HasExited) { throw 'Installed server exited before becoming ready' }
+                try {
+                  $info = Invoke-RestMethod 'http://127.0.0.1:49587/api/info' -Headers @{ Authorization = "Basic $auth" } -TimeoutSec 2
+                  if ($info.version -ne $version) { throw 'Server version mismatch' }
+                  $ready = $true
+                  break
+                } catch { Start-Sleep -Seconds 1 }
+              }
+              if (!$ready) { throw 'Installed server did not become ready' }
+              Write-Output "Installed server verified: $version"
+            } finally {
+              if (!$server.HasExited) { Stop-Process -Id $server.Id -Force }
+              Remove-Item Env:OPENCODE_PASSWORD
             }
-            if (!$ready) { throw 'Installed server did not become ready' }
-            Write-Output "Installed server verified: $version"
-          } finally {
-            if (!$server.HasExited) { Stop-Process -Id $server.Id -Force }
-            Remove-Item Env:OPENCODE_PASSWORD
+          } catch {
+            $_ | Out-String | Set-Content "$env:RUNNER_TEMP/ohmycode-install-error.log"
+            Write-Output "::error::$($_.Exception.Message)"
+            throw
           }
       - name: Upload Windows installer and instructions
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -95,5 +101,6 @@ jobs:
           path: |
             ${{ runner.temp }}/ohmycode-build.log
             ${{ runner.temp }}/server.stderr.log
+            ${{ runner.temp }}/ohmycode-install-error.log
           if-no-files-found: ignore
           retention-days: 7
