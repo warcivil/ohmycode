@@ -15,6 +15,8 @@ import { ServerConnection } from "@/runtime/server/registry"
 import { sessionIDHasOpenTab, useTabs } from "@/shell/tabs/tabs"
 import { sessionHref } from "@/shell/routes/session"
 import { useServer } from "@/runtime/server/current"
+import { generationErrorKind } from "./generation-error"
+import { showToast } from "./toast"
 
 const NotificationBase = {
   directory: Schema.optional(Schema.String),
@@ -142,7 +144,7 @@ export function createServerNotificationState(input: {
 
   const [index, setIndex] = createStore<NotificationIndex>(buildNotificationIndex(store.list))
 
-  const meta = { pruned: false, disposed: false }
+  const meta = { pruned: false, disposed: false, errors: new Set<string>() }
 
   const updateUnseen = (scope: "session" | "project", key: string, unseen: Notification[]) => {
     setIndex(scope, "unseen", key, unseen)
@@ -272,6 +274,16 @@ export function createServerNotificationState(input: {
   }
 
   const handleSessionError = (sessionID: string, error: SessionError.Error, eventID: string, time: number) => {
+    if (meta.errors.has(eventID)) return
+
+    meta.errors.add(eventID)
+
+    if (meta.errors.size > MAX_NOTIFICATIONS) {
+      const first = meta.errors.values().next().value
+
+      if (first !== undefined) meta.errors.delete(first)
+    }
+
     void lookup(sessionID).then((session) => {
       if (meta.disposed) return
 
@@ -292,15 +304,40 @@ export function createServerNotificationState(input: {
         error,
       })
 
-      const description =
-        session?.title ??
-        (typeof error === "string" ? error : language.t("notification.session.error.fallbackDescription"))
+      const kind = generationErrorKind(error)
+
+      const title = kind ? language.t(`lama.error.${kind}.title`) : language.t("notification.session.error.title")
+
+      const description = kind
+        ? language.t(`lama.error.${kind}.description`)
+        : (session?.title ?? language.t("notification.session.error.fallbackDescription"))
+
+      if (hasOpenTab && kind && typeof document !== "undefined" && document.hasFocus()) {
+        showToast({
+          variant: "error",
+          title,
+          description,
+          duration: 10_000,
+          actions: [
+            {
+              label: kind === "balance" ? language.t("lama.account.topup") : language.t("lama.error.openChat"),
+              onClick: () => {
+                if (kind === "balance") {
+                  platform.openExternal("https://ohmylama.ru/subscription#topup")
+
+                  return
+                }
+
+                openNotificationSession(tabs, input.key, sessionID)
+              },
+            },
+          ],
+        })
+      }
 
       if (hasOpenTab && settings.notifications.errors()) {
         void input.coordinator.system(`${input.key}\0${eventID}`, () =>
-          platform.notify(language.t("notification.session.error.title"), description, () =>
-            openNotificationSession(tabs, input.key, sessionID),
-          ),
+          platform.notify(title, description, () => openNotificationSession(tabs, input.key, sessionID)),
         )
       }
     })

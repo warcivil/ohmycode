@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { Predicate } from "effect"
 import { statSync } from "node:fs"
 import { cp, mkdtemp, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
@@ -11,9 +12,9 @@ import type { Configuration } from "electron-builder"
 const { FileMatcher } = createRequire(import.meta.resolve("electron-builder"))("app-builder-lib/out/fileMatcher")
 
 const channels = [
-  { channel: "dev", appId: "ai.opencode.desktop.dev" },
-  { channel: "beta", appId: "ai.opencode.desktop.beta" },
-  { channel: "prod", appId: "ai.opencode.desktop" },
+  { channel: "dev", appId: "ru.ohmylama.ohmycode.dev", packageName: "ohmycode-dev" },
+  { channel: "beta", appId: "ru.ohmylama.ohmycode.beta", packageName: "ohmycode-beta" },
+  { channel: "prod", appId: "ru.ohmylama.ohmycode", packageName: "ohmycode" },
 ] as const
 
 async function load(channel: string) {
@@ -21,7 +22,7 @@ async function load(channel: string) {
   process.env.OPENCODE_CHANNEL = channel
 
   try {
-    return (await import(`./electron-builder.config.ts?${channel}`)).default as Configuration
+    return (await import(`./electron-builder.config.ts?${channel}`)).default
   } finally {
     delete process.env.OPENCODE_CHANNEL
 
@@ -33,23 +34,36 @@ function trimFilter(dir: string, config: Configuration) {
   return new FileMatcher(dir, "", (value: string) => value, [
     "**/*",
     ...(Array.isArray(config.files) ? config.files : []).filter(
-      (value): value is string => typeof value === "string" && value.startsWith("!"),
+      (value): value is string => Predicate.isString(value) && value.startsWith("!"),
     ),
   ]).createFilter()
 }
 
-test.each(channels)("channel identity for $channel", async ({ channel, appId }) => {
+test.each(channels)("channel identity for $channel", async ({ channel, appId, packageName }) => {
   const config = await load(channel)
+  expect(config.extraMetadata?.name).toBe(packageName)
   expect(config.appId).toBe(appId)
+  expect(config.publish).toEqual({
+    provider: "generic",
+    url: `https://ohmylama.ru/api/uploads/ohmycode-updates/${channel}`,
+    channel: "latest",
+  })
+  expect(config.generateUpdatesFilesForAllChannels).toBe(false)
   expect(config.extraMetadata?.desktopName).toBe(`${appId}.desktop`)
   expect(config.linux?.executableName).toBe(appId)
   expect(config.linux?.desktop?.entry?.StartupWMClass).toBe(appId)
+  expect(config.deb?.packageName).toBe(packageName)
+  expect(config.rpm?.packageName).toBe(packageName)
+  expect(config.deb?.depends).toContain("libasound2")
+  // Electron's sandbox launcher must be able to execute the install path without splitting it at spaces.
+  expect(config.productName).not.toContain(" ")
+  expect(config.linux?.desktop?.entry?.Name).toBe(
+    channel === "prod" ? "OhMyCode" : `OhMyCode ${channel === "dev" ? "Dev" : "Beta"}`,
+  )
+  expect(config.artifactName).toBe(`ohmycode-${channel}-\${version}-\${os}-\${arch}.\${ext}`)
 
   for (const fpm of [config.deb?.fpm, config.rpm?.fpm]) {
     expect(fpm).toContainEqual(expect.stringContaining(`/usr/share/metainfo/${appId}.metainfo.xml`))
-    expect(
-      fpm?.some((entry) => entry.endsWith("opencode-desktop.desktop=/usr/share/applications/opencode-desktop.desktop")),
-    ).toBe(channel === "prod")
   }
 })
 
@@ -71,6 +85,7 @@ test("shared packaging defaults", async () => {
   expect(await Bun.file(include).exists()).toBe(true)
   expect(config.files).toContain("!resources/opencode-cli*")
   expect(config.extraResources).toEqual([
+    { from: path.resolve(import.meta.dirname, "../../LICENSE"), to: "LICENSE.OpenCode" },
     { from: "resources/", to: "", filter: ["opencode-cli", "opencode-cli.exe", "opencode-cli.version"] },
   ])
 })

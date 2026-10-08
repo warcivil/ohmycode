@@ -4,6 +4,8 @@ import { BackgroundServiceState } from "./background-service-state"
 import { cleanStages, DesktopCli } from "./desktop-cli"
 import { SidecarCredentials } from "./sidecar-credentials"
 import { sidecarProbe } from "./sidecar-probe"
+import { CHANNEL } from "../constants"
+import { serviceRegistrationFile } from "./service-path"
 
 export * as BackgroundService from "./background-service"
 
@@ -45,7 +47,7 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
       file:
         isolated && process.env.OPENCODE_DESKTOP_SERVER_CHANNEL === "local"
           ? path.join(app.getPath("userData"), "opencode", "service-local.json")
-          : undefined,
+          : serviceRegistrationFile(CHANNEL, process.env.XDG_STATE_HOME!),
       version,
       // A fixed port makes a second contender fail to bind and back off; port 0 never collides, so two
       // services could boot against the same database.

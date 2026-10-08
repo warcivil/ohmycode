@@ -1,6 +1,29 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "lama.account.logout": "Sign out of account",
+  "lama.error.balance.title": "Not enough API balance",
+  "lama.error.balance.description":
+    "Top up your LAMA API balance, then try again. Your chat subscription does not cover API requests.",
+  "lama.error.auth.title": "LAMA connection needs updating",
+  "lama.error.auth.description":
+    "Your API key is invalid or revoked. Sign in to LAMA again or enter a new key in provider settings.",
+  "lama.error.blocked.title": "Access denied",
+  "lama.error.blocked.description":
+    "LAMA denied this request. Check your account access or contact support with the error details from this chat.",
+  "lama.error.rate-limit.title": "Request limit reached",
+  "lama.error.rate-limit.description":
+    "Wait a little, then try again. If this keeps happening, check the limits on your API key.",
+  "lama.error.context.title": "The conversation is too long",
+  "lama.error.context.description":
+    "Compact the conversation, remove large attachments, or choose a model with a larger context window, then try again.",
+  "lama.error.unavailable.title": "Model unavailable",
+  "lama.error.unavailable.description":
+    "Choose another model or try again later. Error details are available in this chat.",
+  "lama.error.connection.title": "The response was interrupted",
+  "lama.error.connection.description":
+    "Check your connection, then try again. If part of the answer was saved, ask the model to continue.",
+  "lama.error.openChat": "Open chat",
   "lama.account.loading": "Loading balance…",
   "lama.account.unavailable": "Balance unavailable",
   "lama.account.disconnected": "Sign in to LAMA",
@@ -58,7 +81,7 @@ export const dict = {
 
   "command.project.open": "Open project",
   "command.project.copyID": "Copy Project ID",
-  "command.provider.connect": "Connect provider",
+  "command.provider.connect": "Sign in to ohmylama",
   "command.provider.connect.description": "Sign in to OpenCode Go, OpenCode Console, or another model provider",
   "command.settings.open": "Open settings",
   "command.session.location.cycle": "Cycle session location",
@@ -892,10 +915,10 @@ export const dict = {
   "settings.shortcuts.group.terminal": "Terminal",
   "settings.shortcuts.group.prompt": "Prompt",
 
-  "settings.providers.title": "Providers",
-  "settings.providers.description": "Connect and manage model providers",
-  "settings.providers.section.connected": "Connected providers",
-  "settings.providers.connected.empty": "No connected providers",
+  "settings.providers.title": "Account",
+  "settings.providers.description": "Sign in to ohmylama and manage your connection",
+  "settings.providers.section.connected": "Connected account",
+  "settings.providers.connected.empty": "You are not signed in to ohmylama",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.account.manage": "Manage {{provider}} accounts",
   "settings.providers.account.group": "Accounts",

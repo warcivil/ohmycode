@@ -1,13 +1,17 @@
 import { $ } from "bun"
 import { join } from "node:path"
+import { createRequire } from "node:module"
 import { getCurrentCli } from "../packages/desktop/scripts/utils"
 
 const root = join(import.meta.dirname, "..")
 process.chdir(root)
-process.env.OPENCODE_VERSION = `${(await Bun.file(join(root, "package.json")).json()).version}-ohmycode.3`
-process.env.OPENCODE_CHANNEL = "dev"
+const buildChannel = Bun.env.OHMYCODE_BUILD_CHANNEL === "prod" ? "prod" : "dev"
+const baseVersion = (await Bun.file(join(root, "package.json")).json()).version
+process.env.OPENCODE_VERSION = Bun.env.OHMYCODE_BUILD_VERSION ?? `${baseVersion}-ohmycode.11`
+process.env.OPENCODE_CHANNEL = buildChannel
 process.env.NODE_OPTIONS ??= "--max-old-space-size=6144"
-await $`node packages/desktop/node_modules/electron/install.js`
+const electronInstall = createRequire(join(root, "packages/desktop/package.json")).resolve("electron/install.js")
+await $`node ${electronInstall}`
 await $`bun run --cwd packages/app build`
 const target = getCurrentCli().package.replace("@opencode/cli-", "opencode-")
 await $`bun packages/cli/script/build.ts --target=${target} --skip-install --skip-web-ui`

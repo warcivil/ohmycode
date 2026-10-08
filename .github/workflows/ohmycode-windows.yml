@@ -1,0 +1,100 @@
+name: OhMyCode Windows prod installer
+run-name: OhMyCode prod Windows x64 — ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [v2]
+    paths:
+      - ".github/workflows/ohmycode-windows.yml"
+      - ".github/actions/setup-bun/**"
+      - "packages/**"
+      - "script/**"
+      - "package.json"
+      - "bun.lock"
+      - "patches/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ohmycode-windows-prod-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      OHMYCODE_BUILD_CHANNEL: prod
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.12
+      OPENCODE_CHANNEL: prod
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      NODE_OPTIONS: --max-old-space-size=6144
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: ./.github/actions/setup-bun
+      - name: Check installer and startup contracts
+        working-directory: packages/desktop
+        run: bun test electron-builder.config.test.ts src/main/service src/main/lifecycle
+      - name: Build Windows prod installer
+        run: |
+          bun run package:ohmycode:win 2>&1 | Tee-Object "$env:RUNNER_TEMP/ohmycode-build.log"
+          if ($LASTEXITCODE -ne 0) { throw "Windows build failed: $LASTEXITCODE" }
+      - name: Verify installed bundled server
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = @(Get-ChildItem packages/desktop/dist/ohmycode-prod-*-win-x64.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one prod installer' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'OhMyCodeSmoke'
+          $install = Start-Process $installer[0].FullName -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw 'Installation failed' }
+          $cli = Join-Path $installDir 'resources/opencode-cli.exe'
+          $version = (Get-Content (Join-Path $installDir 'resources/opencode-cli.version') -Raw).Trim()
+          $actual = (& $cli --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -ne "opencode v$version") { throw "CLI version mismatch: $actual" }
+          $env:OPENCODE_PASSWORD = [Guid]::NewGuid().ToString('N')
+          Write-Output "::add-mask::$env:OPENCODE_PASSWORD"
+          $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$env:OPENCODE_PASSWORD"))
+          $server = Start-Process $cli -ArgumentList 'serve', '--hostname', '127.0.0.1', '--port', '49587' -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/server.stdout.log" -RedirectStandardError "$env:RUNNER_TEMP/server.stderr.log"
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              if ($server.HasExited) { throw 'Server exited before ready' }
+              try {
+                $info = Invoke-RestMethod 'http://127.0.0.1:49587/api/info' -Headers @{ Authorization = "Basic $auth" } -TimeoutSec 2
+                if ($info.version -eq $version) { $ready = $true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (!$ready) { throw 'Installed server did not become ready' }
+            Write-Output "Installed prod server verified: $version"
+          } finally {
+            if (!$server.HasExited) { Stop-Process -Id $server.Id -Force }
+            Remove-Item Env:OPENCODE_PASSWORD
+          }
+      - name: Upload prod installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ohmycode-prod-windows-x64
+          path: |
+            packages/desktop/dist/ohmycode-prod-*-win-x64.exe
+            packages/desktop/dist/latest.yml
+            packages/desktop/dist/*.blockmap
+            packages/desktop/dist/INSTALL-WINDOWS.txt
+            packages/desktop/dist/SHA256SUMS-WINDOWS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ohmycode-prod-windows-diagnostics
+          path: |
+            ${{ runner.temp }}/ohmycode-build.log
+            ${{ runner.temp }}/server.stderr.log
+          if-no-files-found: ignore
+          retention-days: 7

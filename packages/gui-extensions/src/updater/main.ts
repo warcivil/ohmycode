@@ -9,8 +9,8 @@ import { make } from "./machine"
 const setup: MainSetup<typeof definition> = async (ctx) => {
   const build = ctx.build
   const lifecycle = ctx.lifecycle
-  // Enable only after an OhMyCode release feed exists.
-  const enabled = false
+  // macOS requires a signed distribution; development runs never install updates.
+  const enabled = build.packaged && build.channel !== "local" && process.platform !== "darwin"
   // Holds no resources, so it needs no cleanup.
   const context = logContext(ctx.log.write)
   const runPromise = Effect.runPromiseWith(context)

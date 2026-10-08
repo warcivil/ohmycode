@@ -4,7 +4,9 @@ import { enableCompileCache } from "node:module"
 import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 import { app } from "electron"
-import { APP_ID, APP_NAME } from "../constants"
+import { APP_ID, APP_NAME, CHANNEL } from "../constants"
+import { serviceFilename } from "../service/service-path"
+import { applicationProfile } from "./profile"
 
 const testOnboarding = process.env.OPENCODE_TEST_ONBOARDING === "1"
 
@@ -30,7 +32,7 @@ export function configureApplication() {
     app.commandLine.appendSwitch("remote-debugging-port", process.env.OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT ?? "9222")
 
   const testRoot = createTestRoot()
-  app.setPath("userData", testRoot ? path.join(testRoot, "desktop") : path.join(app.getPath("appData"), APP_ID))
+  app.setPath("userData", testRoot ? path.join(testRoot, "desktop") : applicationProfile(app.getPath("appData"), APP_ID))
 
   if (testRoot) {
     app.setPath("sessionData", path.join(testRoot, "session"))
@@ -46,8 +48,9 @@ export function configureApplication() {
   }
 
   const serviceDirectory = path.join(process.env.XDG_CONFIG_HOME!, "opencode")
-  const serviceFile = path.join(serviceDirectory, "service.json")
+  const serviceFile = path.join(serviceDirectory, serviceFilename(CHANNEL))
   mkdirSync(serviceDirectory, { recursive: true })
+
   if (!existsSync(serviceFile)) {
     const port = APP_ID.endsWith(".dev") ? 49474 : APP_ID.endsWith(".beta") ? 49475 : 49476
     writeFileSync(serviceFile, JSON.stringify({ port }), { mode: 0o600 })

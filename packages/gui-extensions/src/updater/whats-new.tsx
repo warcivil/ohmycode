@@ -1,11 +1,12 @@
-import { createSignal, Index, Show } from "solid-js"
+import { For, Show } from "solid-js"
 import { Effect, Option, Predicate, Schema } from "effect"
 import { Button } from "@opencode/ui/button"
-import { Dialog } from "@opencode/ui/dialog"
+import { Switch } from "@opencode/ui/switch"
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { useExtension, type DialogHandle, type SetupContext } from "../sdk"
 import type definition from "./index"
 
-const CHANGELOG_URL = "https://opencode.ai/changelog.json"
+const CHANGELOG_URL = "https://ohmylama.ru/api/uploads/ohmycode-updates/changelog.json"
 
 type Highlight = {
   title: string
@@ -78,7 +79,7 @@ export function showWhatsNew(
       timers.add(
         setTimeout(() => {
           input.markSeen()
-          ctx.dialogs.open((dialog) => <DialogReleaseNotes highlights={highlights} dialog={dialog} />, {
+          ctx.dialogs.open((dialog) => <DialogReleaseNotes highlights={highlights} version={input.current} dialog={dialog} />, {
             replace: true,
           })
         }, 500),
@@ -182,144 +183,53 @@ function sliceHighlights(list: { tag?: string; highlights: Highlight[] }[], curr
     .slice(0, 5)
 }
 
-function DialogReleaseNotes(props: { highlights: Highlight[]; dialog: DialogHandle }) {
+function DialogReleaseNotes(props: { highlights: Highlight[]; version: string; dialog: DialogHandle }) {
   const ctx = useExtension<typeof definition>()
-  const [index, setIndex] = createSignal(0)
-
-  const total = () => props.highlights.length
-  const last = () => Math.max(0, total() - 1)
-  const feature = () => props.highlights[index()] ?? props.highlights[last()]
-  const isFirst = () => index() === 0
-  const isLast = () => index() >= last()
-  const paged = () => total() > 1
-
-  function handleNext() {
-    if (isLast()) return
-
-    setIndex(index() + 1)
-  }
-
-  function handleClose() {
-    props.dialog.close()
-  }
-
-  function handleDisable() {
-    ctx.stores.releaseNotes.update((draft) => {
-      draft.enabled = false
-    })
-    handleClose()
-  }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      handleClose()
-
-      return
-    }
-
-    if (!paged()) return
-
-    if (e.key === "ArrowLeft" && !isFirst()) {
-      e.preventDefault()
-      setIndex(index() - 1)
-    }
-
-    if (e.key === "ArrowRight" && !isLast()) {
-      e.preventDefault()
-      setIndex(index() + 1)
-    }
-  }
 
   return (
-    <Dialog
-      size="large"
-      fit
-      class="w-[min(calc(100vw-40px),720px)] h-[min(calc(100vh-40px),400px)] -mt-20 min-h-0 overflow-hidden"
-    >
-      <div class="flex flex-1 min-w-0 min-h-0" tabIndex={0} autofocus onKeyDown={handleKeyDown}>
-        {/* Left side - Text content */}
-        <div class="flex flex-col flex-1 min-w-0 p-8">
-          {/* Top section - feature content (fixed position from top) */}
-          <div class="flex flex-col gap-2 pt-22">
-            <div class="flex items-center gap-2">
-              <h1 class="text-16-medium text-text-strong">{feature()?.title ?? ""}</h1>
-            </div>
-            <p class="text-14-regular text-text-base">{feature()?.description ?? ""}</p>
-          </div>
-
-          {/* Spacer to push buttons to bottom */}
-          <div class="flex-1" />
-
-          {/* Bottom section - buttons and indicators (fixed position) */}
-          <div class="flex flex-col gap-12">
-            <div class="flex flex-col items-start gap-3">
-              <Show
-                when={isLast()}
-                fallback={
-                  <Button variant="neutral" size="large" onClick={handleNext}>
-                    {ctx.t("releaseNotes.action.next")}
-                  </Button>
-                }
-              >
-                <Button variant="contrast" size="large" onClick={handleClose}>
-                  {ctx.t("releaseNotes.action.getStarted")}
-                </Button>
-              </Show>
-
-              <Button variant="ghost" size="small" onClick={handleDisable}>
-                {ctx.t("releaseNotes.action.hideFuture")}
-              </Button>
-            </div>
-
-            <Show when={paged()}>
-              <div class="flex items-center gap-1.5 -my-2.5">
-                <Index each={props.highlights}>
-                  {(_, i) => (
-                    <button
-                      type="button"
-                      class="h-6 flex items-center cursor-pointer bg-transparent border-none p-0 transition-all duration-200"
-                      classList={{
-                        "w-8": i === index(),
-                        "w-3": i !== index(),
-                      }}
-                      onClick={() => setIndex(i)}
+    <Dialog fit>
+      <DialogHeader>
+        <DialogTitleGroup title={ctx.t("releaseNotes.heading")} description={props.version} />
+      </DialogHeader>
+      <DialogBody>
+        <div class="flex flex-col gap-5 px-4 pb-4 max-h-[60vh] overflow-y-auto">
+          <For each={props.highlights}>
+            {(feature) => (
+              <section class="flex flex-col gap-2">
+                <h2 class="text-14-medium text-text-strong">{feature.title}</h2>
+                <p class="text-14-regular text-text-base whitespace-pre-wrap break-words">{feature.description}</p>
+                <Show when={feature.media}>
+                  {(media) => (
+                    <Show
+                      when={media().type === "image"}
+                      fallback={<video src={media().src} controls muted playsinline class="w-full rounded-lg" />}
                     >
-                      <div
-                        class="w-full h-0.5 rounded-[1px] transition-colors duration-200"
-                        classList={{
-                          "bg-icon-strong-base": i === index(),
-                          "bg-icon-weak-base": i !== index(),
-                        }}
+                      <img
+                        src={media().src}
+                        alt={media().alt ?? feature.title}
+                        class="w-full rounded-lg object-contain"
                       />
-                    </button>
+                    </Show>
                   )}
-                </Index>
-              </div>
-            </Show>
-          </div>
+                </Show>
+              </section>
+            )}
+          </For>
         </div>
-
-        {/* Right side - Media content (edge to edge) */}
-        <Show when={feature()?.media}>
-          {(media) => (
-            <div class="flex-1 min-w-0 bg-surface-base overflow-hidden rounded-r-xl">
-              <Show
-                when={media().type === "image"}
-                fallback={
-                  <video src={media().src} autoplay loop muted playsinline class="w-full h-full object-cover" />
-                }
-              >
-                <img
-                  src={media().src}
-                  alt={media().alt ?? feature()?.title ?? ctx.t("releaseNotes.media.alt")}
-                  class="w-full h-full object-cover"
-                />
-              </Show>
-            </div>
-          )}
-        </Show>
-      </div>
+      </DialogBody>
+      <DialogFooter>
+        <div class="flex w-full flex-wrap items-center justify-between gap-4">
+          <Switch
+            checked={ctx.stores.releaseNotes.value.enabled}
+            onChange={(enabled) => ctx.stores.releaseNotes.update((draft) => { draft.enabled = enabled })}
+          >
+            {ctx.t("releaseNotes.showAfterUpdate")}
+          </Switch>
+          <Button variant="contrast" size="large" autofocus onClick={() => props.dialog.close()}>
+            {ctx.t("releaseNotes.dismiss")}
+          </Button>
+        </div>
+      </DialogFooter>
     </Dialog>
   )
 }

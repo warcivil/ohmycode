@@ -1,6 +1,6 @@
 import { showToast } from "@opencode/ui/toast"
 import { lazy, onCleanup, Suspense } from "solid-js"
-import { createKeyed, onIdle, Command, SettingsPage, TitlebarItem, type Setup, type SetupContext } from "../sdk"
+import { createKeyed, onIdle, Command, SettingsPage, Slot, TitlebarItem, type Setup, type SetupContext } from "../sdk"
 import { updaterAction } from "./action"
 import type definition from "./index"
 
@@ -24,6 +24,38 @@ const setup: Setup<typeof definition> = (ctx) => {
     // Not loaded yet, or gone (disabled, failed, blocked, restarting): nothing can check or install.
     showToast({ title: ctx.t("common.requestFailed") })
   }
+
+  const ReadyDialog = lazy(() => import("./ready-dialog"))
+  // Synchronize staged updates with the window's dialog host, once per version.
+  createKeyed(
+    () => {
+      const current = state()
+
+      return current?.status === "ready" ? current.version : undefined
+    },
+    (version) => {
+      if (ctx.stores.announced.value.version === version) return
+
+      ctx.dialogs.open((dialog) => (
+        <Suspense>
+          <ReadyDialog version={version} close={() => dialog.close()} install={() => act("install")} />
+        </Suspense>
+      ))
+      ctx.stores.announced.update((draft) => {
+        draft.version = version
+      })
+    },
+  )
+
+  const Banner = lazy(() => import("./banner"))
+  ctx.add(Slot, {
+    at: "window.bottom",
+    render: () => (
+      <Suspense>
+        <Banner state={state} install={() => act("install")} />
+      </Suspense>
+    ),
+  })
 
   const Section = lazy(() => import("./section"))
   // Settings rows are small; load them while idle so settings opens without a blank row.

@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { app } from "electron"
 import type { Endpoint } from "@opencode/client/service"
+import { CHANNEL } from "../constants"
+import { serviceRegistrationFile } from "./service-path"
 
 // The main thread idles between showing the first window and evaluating the main bundle, waiting
 // for the renderer's asset requests. That slot is long enough to find out whether a compatible
@@ -16,7 +18,9 @@ export function startSidecarProbe() {
 
   if (!version) return
   probe = import("@opencode/client/service")
-    .then(({ Service }) => Service.discover({ version }))
+    .then(({ Service }) =>
+      Service.discover({ version, file: serviceRegistrationFile(CHANNEL, process.env.XDG_STATE_HOME!) }),
+    )
     .catch(() => undefined)
 }
 

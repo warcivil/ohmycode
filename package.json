@@ -34,7 +34,9 @@
     "random": "echo 'Random script'",
     "sso": "aws sso login --sso-session=opencode --no-browser",
     "test": "echo 'do not run tests from root' && exit 1",
-    "build:ohmycode": "bun script/build-ohmycode.ts"
+    "build:ohmycode": "bun script/build-ohmycode.ts",
+    "package:ohmycode:deb": "bun script/package-ohmycode-deb.ts",
+    "package:ohmycode:win": "bun script/package-ohmycode-win.ts"
   },
   "workspaces": {
     "packages": [

@@ -6,6 +6,7 @@ import { DesktopPaths } from "../paths"
 import { getUserShell, loadShellEnv } from "../service/shell-env"
 import { registerRendererProtocol, setDockIcon, setProtocolReporter } from "../windows"
 import { scoped } from "../native/logging"
+import { applicationEnvironment } from "./shell-environment"
 
 // electron-context-menu attaches to every existing and future window, so it can load once the first
 // window is up instead of holding up startup with its dependency tree.
@@ -23,13 +24,7 @@ export const preferApplicationEnvironment = Effect.gen(function* () {
   const shell = process.platform === "win32" ? null : getUserShell()
   const shellEnv = shell ? yield* loadShellEnv(shell) : null
   yield* Effect.sync(() => {
-    if (!shellEnv?.XDG_STATE_HOME) delete process.env.XDG_STATE_HOME
-    Object.assign(process.env, {
-      ...shellEnv,
-      OPENCODE_EXPERIMENTAL_ICON_DISCOVERY: "true",
-      OPENCODE_EXPERIMENTAL_FILEWATCHER: "true",
-      OPENCODE_CLIENT: "desktop",
-    })
+    Object.assign(process.env, applicationEnvironment(process.env, shellEnv))
   })
 })
 

@@ -1,4 +1,33 @@
 export const dict = {
+  "desktop.menu.lamaSupport": "Поддержка ohmylama в Telegram",
+  "provider.connect.oauth.expired": "Время ожидания входа истекло",
+  "provider.connect.oauth.openBrowser": "Открыть браузер",
+  "provider.connect.oauth.code.description": "Войдите в {{provider}} в браузере и вставьте полученный код авторизации ниже.",
+  "provider.connect.oauth.auto.description": "Завершите вход в {{provider}} в браузере, затем вернитесь в приложение.",
+  "provider.connect.oauth.auto.confirmationCode.description": "Перед подтверждением убедитесь, что в браузере показан такой же код.",
+  "lama.account.logout": "Выйти из аккаунта",
+  "lama.error.balance.title": "Недостаточно средств на API-балансе",
+  "lama.error.balance.description":
+    "Пополните API-баланс LAMA и повторите запрос. Подписка на чат не оплачивает запросы через API.",
+  "lama.error.auth.title": "Нужно заново подключить LAMA",
+  "lama.error.auth.description":
+    "API-ключ неверен или отозван. Войдите в LAMA заново или укажите новый ключ в настройках провайдера.",
+  "lama.error.blocked.title": "Доступ запрещён",
+  "lama.error.blocked.description":
+    "LAMA отклонила запрос. Проверьте доступ к аккаунту или обратитесь в поддержку с подробностями ошибки из этого чата.",
+  "lama.error.rate-limit.title": "Достигнут лимит запросов",
+  "lama.error.rate-limit.description":
+    "Подождите немного и повторите запрос. Если ошибка повторяется, проверьте лимиты своего API-ключа.",
+  "lama.error.context.title": "В чате слишком большой контекст",
+  "lama.error.context.description":
+    "Сожмите историю, уберите большие вложения или выберите модель с большим окном контекста, затем повторите запрос.",
+  "lama.error.unavailable.title": "Модель недоступна",
+  "lama.error.unavailable.description":
+    "Выберите другую модель или повторите запрос позже. Подробности ошибки доступны в этом чате.",
+  "lama.error.connection.title": "Получение ответа прервано",
+  "lama.error.connection.description":
+    "Проверьте соединение и повторите запрос. Если часть ответа сохранилась, попросите модель продолжить.",
+  "lama.error.openChat": "Открыть чат",
   "lama.account.loading": "Загрузка баланса…",
   "lama.account.unavailable": "Баланс недоступен",
   "lama.account.disconnected": "Войдите в LAMA",
@@ -115,7 +144,7 @@ export const dict = {
   "theme.scheme.dark": "Тёмная",
 
   "command.project.open": "Открыть проект",
-  "command.provider.connect": "Подключить провайдера",
+  "command.provider.connect": "Войти в ohmylama",
   "command.settings.open": "Открыть настройки",
 
   "command.palette": "Палитра команд",
@@ -193,7 +222,7 @@ export const dict = {
 
   "dialog.provider.viewAll": "Показать больше провайдеров",
 
-  "provider.connect.title": "Подключить {{provider}}",
+  "provider.connect.title": "Войти в {{provider}}",
   "provider.connect.selectMethod": "Выберите способ входа для {{provider}}.",
   "provider.connect.method.apiKey": "Ключ API",
   "provider.connect.method.browser": "Браузер",
@@ -599,10 +628,10 @@ export const dict = {
   "settings.shortcuts.group.terminal": "Терминал",
   "settings.shortcuts.group.prompt": "Запрос",
 
-  "settings.providers.title": "Провайдеры",
-  "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
-  "settings.providers.section.connected": "Подключённые провайдеры",
-  "settings.providers.connected.empty": "Нет подключённых провайдеров",
+  "settings.providers.title": "Аккаунт",
+  "settings.providers.description": "Вход в ohmylama и управление подключением",
+  "settings.providers.section.connected": "Подключённый аккаунт",
+  "settings.providers.connected.empty": "Вы ещё не вошли в ohmylama",
   "settings.providers.section.popular": "Популярные провайдеры",
   "settings.providers.tag.environment": "Среда",
   "settings.providers.tag.config": "Конфигурация",

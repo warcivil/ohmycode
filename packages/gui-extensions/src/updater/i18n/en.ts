@@ -1,13 +1,17 @@
 export default {
+  "releaseNotes.heading": "What's new in OhMyCode",
+  "releaseNotes.showAfterUpdate": "Show after updates",
+  "releaseNotes.dismiss": "Got it",
+
   "status.label": "Update",
   "action.checkNow": "Check now",
   "action.checking": "Checking…",
   "action.downloading": "Downloading…",
   "action.installRestart": "Install and restart",
-  "action.download": "Download OpenCode",
+  "action.download": "Download OhMyCode",
   "action.installing": "Installing…",
   "toast.latest.title": "You're up to date",
-  "toast.latest.description": "You're running the latest version of OpenCode.",
+  "toast.latest.description": "You're running the latest version of OhMyCode.",
   "migration.title": "Move from Beta to Stable",
   "migration.description":
     "For now, OpenCode Beta is moving to OpenCode Stable. Download version {{version}}, then install OpenCode from the disk image to continue receiving updates.",

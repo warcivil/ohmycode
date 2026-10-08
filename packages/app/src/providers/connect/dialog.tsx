@@ -153,7 +153,7 @@ export const DialogConnectProvider: Component<{
       containerClass={
         state.modelProvider
           ? "!h-[min(calc(100vh_-_16px),560px)] !w-[min(calc(100vw_-_16px),640px)]"
-          : consoleSelected() && state.authorization
+          : (controller.selected() === "ohmylama" || (consoleSelected() && state.authorization))
             ? "!h-auto !max-h-[min(calc(100vh_-_16px),560px)] !w-[min(calc(100vw_-_16px),640px)]"
             : "!h-[min(calc(100vh_-_16px),512px)] !w-[min(calc(100vw_-_16px),640px)]"
       }
@@ -606,7 +606,7 @@ function ProviderConnection(props: {
       hint:
         hint?.toLowerCase() === "headless"
           ? language.t("provider.connect.method.headless")
-          : hint?.toLowerCase() === "browser" || (!hint && value?.type === "key")
+          : hint?.toLowerCase() === "browser"
             ? language.t("provider.connect.method.browser")
             : undefined,
     }
@@ -827,9 +827,7 @@ function ProviderConnection(props: {
                   class="group flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-[13px] leading-5 tracking-[-0.04px] hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
                   onClick={() => void controller.auth.select(index())}
                 >
-                  <span class="flex h-2 w-4 shrink-0 items-center justify-center rounded-[1px] bg-v2-background-bg-base shadow-[var(--v2-elevation-button-neutral)]">
-                    <span class="hidden h-0.5 w-2.5 bg-v2-icon-icon-base group-hover:block group-focus-visible:block" />
-                  </span>
+                  <Icon name={item.type === "key" ? "key" : "external-link"} size="small" />
                   <span class="font-[530] text-v2-text-text-base">{details().label}</span>
                   <Show when={details().hint}>
                     {(hint) => <span class="font-[440] text-v2-text-text-muted">{hint()}</span>}
