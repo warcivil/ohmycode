@@ -107,14 +107,31 @@ stateDiagram-v2
 - Teardown of other work: `onCleanup` in the window, `ctx.scope.addFinalizer` in main. Setup returns nothing.
 - Window setup is synchronous: its `undefined` return type rejects async functions, and the host fails thenable-returning JavaScript setups instead of waiting for them. Put async work in `createKeyed` or `createLatest`, with `ctx.signal` or a signal derived from it. Only main setup may be async. After each `await` there is no owner; return if the signal aborted before registering or changing state. Late registrations remain safe: the host releases them when the owner or instance ended.
 
-The updater listens to its main side's `check` event once per generation of that side. When main restarts, the run ends and its listener goes with it:
+The updater opens the staged-update dialog once per ready version. The keyed run ends when that version changes:
 
 <!-- source: src/updater/renderer.tsx#createKeyed -->
 
 ```tsx
-// Beta builds answer the app menu's Check for Updates in the focused window instead of a native dialog. The
-// listener ends with the generation of the main side that sends it.
-createKeyed(updater, (client) => void client.on("check", () => act("check")))
+// Synchronize staged updates with the window's dialog host, once per version.
+createKeyed(
+  () => {
+    const current = state()
+
+    return current?.status === "ready" ? current.version : undefined
+  },
+  (version) => {
+    if (ctx.stores.announced.value.version === version) return
+
+    ctx.dialogs.open((dialog) => (
+      <Suspense>
+        <ReadyDialog version={version} close={() => dialog.close()} install={() => act("install")} />
+      </Suspense>
+    ))
+    ctx.stores.announced.update((draft) => {
+      draft.version = version
+    })
+  },
+)
 ```
 
 ### The routed session
