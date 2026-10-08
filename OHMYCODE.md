@@ -95,3 +95,6 @@ a silent installation and an authenticated `/api/info` response from the install
 server, and uploads `ohmycode-windows-x64` with the `.exe`, installation notes and
 SHA-256 checksum. It does not publish a release or require provider keys/signing
 credentials. Local Windows x64 builds use `bun run package:ohmycode:win`.
+
+
+Own updates (2.0.24-ohmycode.5): dev installers check the separate ohmylama.ru feed on launch and every ten minutes, download in the background, and install only on explicit request. No downgrade or upstream OpenCode update is allowed. Packaging tests validate channel isolation; updater state-machine tests cover concurrent checks, cache revalidation and failed-install retry. Windows uses NSIS; Linux uses the generated package-type marker and .deb updater. macOS remains disabled pending a signed distribution. See PUBLISH-UPDATES.txt for publication. Changed en/ru copy only substitutes the product name in existing reviewed translations.

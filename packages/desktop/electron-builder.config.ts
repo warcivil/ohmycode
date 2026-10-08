@@ -63,6 +63,7 @@ const APP_IDS = {
 
 const getBase = (appId: string): Configuration => {
   const extraMetadata: Configuration["extraMetadata"] = {
+    name: channel === "prod" ? "ohmycode" : `ohmycode-${channel}`,
     desktopName: `${appId}.desktop`,
     homepage: "https://github.com/warcivil/ohmycode",
     description: "OhMyCode — desktop coding agent powered by LAMA, based on OpenCode",

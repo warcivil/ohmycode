@@ -49,7 +49,7 @@ sudo apt remove ohmycode-dev
 На Linux x86-64 установите Git, Node.js 24 и Bun 1.4.2. Затем:
 
 ```sh
-git clone --branch v2 https://github.com/warcivil/ohmycode.git
+git clone --branch windows-installer https://github.com/warcivil/ohmycode.git
 cd ohmycode
 bun install
 bun run package:ohmycode:deb

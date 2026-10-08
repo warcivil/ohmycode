@@ -41,6 +41,7 @@ function trimFilter(dir: string, config: Configuration) {
 
 test.each(channels)("channel identity for $channel", async ({ channel, appId, packageName }) => {
   const config = await load(channel)
+  expect(config.extraMetadata?.name).toBe(packageName)
   expect(config.appId).toBe(appId)
   expect(config.publish).toEqual({
     provider: "generic",

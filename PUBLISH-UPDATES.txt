@@ -1,0 +1,29 @@
+OhMyCode — выпуск обновлений (Dev, Windows x64 + Ubuntu x64)
+
+Источник исходников с обновлениями: https://github.com/warcivil/ohmycode/tree/windows-installer
+1. Увеличьте суффикс -ohmycode.N в script/build-ohmycode.ts.
+2. Проверьте изменения, затем отправьте их в ветку windows-installer.
+   GitHub Actions соберёт Windows. Дождитесь зелёной проверки установки и сервера.
+3. На Ubuntu соберите пакет: bun run package:ohmycode:deb
+4. Скачайте Windows artifact ohmycode-windows-x64 из Actions и распакуйте
+   вместе с latest.yml и .blockmap в artifacts/windows.
+5. Скопируйте Ubuntu .deb и latest-linux.yml из packages/desktop/dist
+   в artifacts/ubuntu. Не смешивайте разные версии.
+6. Проверьте и опубликуйте (нужны python3, PyYAML и SSH-доступ к серверу):
+   python3 script/publish-ohmycode-updates.py --ubuntu artifacts/ubuntu --windows artifacts/windows --notes "Описание изменений" --check-only
+   python3 script/publish-ohmycode-updates.py --ubuntu artifacts/ubuntu --windows artifacts/windows --notes "Описание изменений"
+
+Проверяются версии, размеры и SHA512 установщиков. Файлы передаются сначала,
+метаданные переключаются после проверки. Старые установщики остаются для
+дифференциальной загрузки. Уже опубликованный установщик нельзя заменить
+другим файлом той же версии: нужно увеличить номер версии.
+
+Источник обновлений: https://ohmylama.ru/api/uploads/ohmycode-updates/dev
+Никаких API-ключей или паролей в установщиках и метаданных быть не должно.
+Не публикуйте внутренние сведения о закупке и поставщиках в описании релиза.
+
+Клиент проверяет версии при запуске и каждые 10 минут, загружает обновление,
+затем предлагает «Установить и перезапустить». Автоматической установки при
+обычном закрытии нет. Ubuntu может запросить пароль системного пользователя.
+Обновления macOS отключены: сначала требуется отдельная подписанная сборка.
+Со сборки .4 необходимо один раз установить .5 вручную.
