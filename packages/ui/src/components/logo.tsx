@@ -1,6 +1,6 @@
 import { Wordmark } from "../typography/wordmark/wordmark"
 import { type ComponentProps } from "solid-js"
-import lama from "../assets/brand/lama.jpeg"
+import ohmycode from "../assets/brand/ohmycode.svg"
 
 export const Mark = (props: { class?: string }) => {
   return (
@@ -11,7 +11,7 @@ export const Mark = (props: { class?: string }) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <image href={lama} width="100" height="100" style={{ "clip-path": "circle(50%)" }} />
+      <image href={ohmycode} width="100" height="100" />
     </svg>
   )
 }
@@ -26,7 +26,7 @@ export const Splash = (props: Pick<ComponentProps<"svg">, "ref" | "class">) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <image href={lama} width="100" height="100" style={{ "clip-path": "circle(50%)" }} />
+      <image href={ohmycode} width="100" height="100" />
     </svg>
   )
 }

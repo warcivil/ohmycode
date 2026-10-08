@@ -5,7 +5,7 @@ import { getCurrentCli } from "../packages/desktop/scripts/utils"
 
 const root = join(import.meta.dirname, "..")
 process.chdir(root)
-process.env.OPENCODE_VERSION = `${(await Bun.file(join(root, "package.json")).json()).version}-ohmycode.5`
+process.env.OPENCODE_VERSION = `${(await Bun.file(join(root, "package.json")).json()).version}-ohmycode.6`
 process.env.OPENCODE_CHANNEL = "dev"
 process.env.NODE_OPTIONS ??= "--max-old-space-size=6144"
 const electronInstall = createRequire(join(root, "packages/desktop/package.json")).resolve("electron/install.js")

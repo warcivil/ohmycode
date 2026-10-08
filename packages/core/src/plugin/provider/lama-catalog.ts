@@ -1,4 +1,4 @@
-// Public LAMA catalog snapshot, refreshed 2026-10-06. No credentials.
+// Public LAMA catalog snapshot, refreshed 2026-10-08. No credentials.
 export default {
   models: [
     "grok-4.7",
@@ -154,7 +154,7 @@ export default {
     "gpt-5.2-pro": [10.5, 84],
     "gpt-5.5": [2.5, 15, 0.25],
     "gpt-6-astra-cheaper": [1, 4.5, 1],
-    "gpt-6-astra": [3.5, 19, 0.35, 4.375],
+    "gpt-6-astra": [3.5, 15, 0.35, 4.375],
     "gpt-5.1": [0.625, 5, 0.0625],
     "gpt-5-mini": [0.125, 1, 0.0125],
     "gpt-5-nano": [0.02, 0.2, 0.0025],
@@ -162,6 +162,6 @@ export default {
     "qwen3.7-plus": [0.14, 0.56, 0.08],
     qwen: [0.17, 0.55],
     "claude-sonnet-5.5": [0.8, 3.5, 0.06, 0.75, 1.2],
-    "gpt-6.1-sol": [0.8, 2.9, 0.04, 0.9],
+    "gpt-6.1-sol": [0.75, 2.6, 0.04, 0.9],
   },
 }
