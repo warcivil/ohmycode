@@ -13,6 +13,14 @@ import uuid
 
 import yaml
 
+def checksum(path):
+    digest = hashlib.sha512()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return base64.b64encode(digest.digest()).decode()
+
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--ubuntu", type=Path, required=True)
 parser.add_argument("--windows", type=Path, required=True)
@@ -34,8 +42,7 @@ for folder, manifest_name, suffix in [(args.ubuntu, "latest-linux.yml", "-linux-
     name = entry["url"]
     assert name == f"ohmycode-dev-{version}{suffix}", "Unexpected installer URL"
     installer = folder / name
-    with installer.open("rb") as stream:
-        digest = base64.b64encode(hashlib.file_digest(stream, "sha512").digest()).decode()
+    digest = checksum(installer)
     assert digest == entry["sha512"], f"Installer checksum mismatch: {name}"
     assert installer.stat().st_size == entry["size"], f"Installer size mismatch: {name}"
     files[name] = installer
@@ -54,13 +61,20 @@ subprocess.run(["ssh", args.server, "mkdir", "-p", staging], check=True)
 with tempfile.TemporaryDirectory(prefix="ohmycode-publish-") as tmp:
     plan = Path(tmp) / "plan.json"
     plan.write_text(json.dumps({"version": versions[0], "notes": args.notes, "files": {
-        name: {"sha512": base64.b64encode(hashlib.file_digest(path.open("rb"), "sha512").digest()).decode(), "size": path.stat().st_size}
+        name: {"sha512": checksum(path), "size": path.stat().st_size}
         for name, path in files.items()
     }}))
     subprocess.run(["scp", *map(str, files.values()), str(plan), f"{args.server}:{staging}/"], check=True)
     remote = r"""
 from pathlib import Path
 import base64,hashlib,json,os,re,sys
+def checksum(path):
+    digest = hashlib.sha512()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return base64.b64encode(digest.digest()).decode()
+
 staging = Path(sys.argv[1])
 plan = json.loads((staging / 'plan.json').read_text())
 root = Path('/opt/ohmylama/backend/uploads/ohmycode-updates')
@@ -76,11 +90,9 @@ for name, expected in plan['files'].items():
     assert Path(name).name == name, 'Unsafe asset name'
     path = staging / name
     assert path.stat().st_size == expected['size'], name
-    with path.open('rb') as stream:
-        assert base64.b64encode(hashlib.file_digest(stream, 'sha512').digest()).decode() == expected['sha512'], name
+    assert checksum(path) == expected['sha512'], name
     if name not in ['latest.yml', 'latest-linux.yml'] and (feed / name).exists():
-        with (feed / name).open('rb') as stream:
-            assert base64.b64encode(hashlib.file_digest(stream, 'sha512').digest()).decode() == expected['sha512'], 'Published installer is immutable; bump version'
+        assert checksum(feed / name) == expected['sha512'], 'Published installer is immutable; bump version'
 for name in plan['files']:
     if name not in ['latest.yml', 'latest-linux.yml']:
         os.replace(staging / name, feed / name)
