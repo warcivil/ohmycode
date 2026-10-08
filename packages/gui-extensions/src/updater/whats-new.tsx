@@ -5,7 +5,7 @@ import { Dialog } from "@opencode/ui/dialog"
 import { useExtension, type DialogHandle, type SetupContext } from "../sdk"
 import type definition from "./index"
 
-const CHANGELOG_URL = "https://opencode.ai/changelog.json"
+const CHANGELOG_URL = "https://ohmylama.ru/api/uploads/ohmycode-updates/changelog.json"
 
 type Highlight = {
   title: string

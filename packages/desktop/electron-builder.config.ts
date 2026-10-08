@@ -6,6 +6,7 @@ import { promisify } from "node:util"
 
 import type { CustomMacSignOptions } from "app-builder-lib"
 import type { Configuration } from "electron-builder"
+import { updateFeed } from "../gui-extensions/src/updater/feed"
 
 const execFileAsync = promisify(execFile)
 
@@ -70,6 +71,8 @@ const getBase = (appId: string): Configuration => {
   if (process.env.OPENCODE_VERSION) extraMetadata.version = process.env.OPENCODE_VERSION
 
   return {
+    publish: updateFeed(channel),
+    generateUpdatesFilesForAllChannels: false,
     artifactName: `ohmycode-${channel}-\${version}-\${os}-\${arch}.\${ext}`,
     directories: {
       output: "dist",

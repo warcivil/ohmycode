@@ -89,6 +89,8 @@ jobs:
           name: ohmycode-windows-x64
           path: |
             packages/desktop/dist/ohmycode-dev-*-win-x64.exe
+            packages/desktop/dist/latest.yml
+            packages/desktop/dist/*.blockmap
             packages/desktop/dist/INSTALL-WINDOWS.txt
             packages/desktop/dist/SHA256SUMS-WINDOWS.txt
           if-no-files-found: error

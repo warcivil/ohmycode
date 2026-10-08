@@ -18,6 +18,8 @@ const dist = join(root, "packages/desktop/dist")
 const name = `ohmycode-dev-${process.env.OPENCODE_VERSION}-win-x64.exe`
 const installer = Bun.file(join(dist, name))
 
+if (!(await Bun.file(join(dist, "latest.yml")).exists())) throw new Error("Windows update manifest was not generated")
+
 if (!(await installer.exists()) || installer.size === 0) throw new Error(`Windows installer missing: ${name}`)
 
 const sha256 = createHash("sha256")
@@ -42,7 +44,9 @@ Node.js, Bun и исходники для запуска установленн�
 Не отключайте защиту Windows.
 
 Обновление: полностью закройте OhMyCode Dev и запустите новый установщик.
-Настройки и диалоги сохраняются локально; автообновления пока отключены.
+Начиная с версии 2.0.24-ohmycode.5, обновления проверяются при запуске и каждые 10 минут.
+После загрузки нажмите «Установить и перезапустить». Со сборки .4 на .5 нужно
+перейти вручную один раз. Настройки и диалоги сохраняются локально.
 Обычный OpenCode использует отдельный профиль.
 
 Удаление: Параметры Windows → Приложения → OhMyCode Dev → Удалить.

@@ -23,8 +23,10 @@ sudo apt install ./ohmycode-dev-${process.env.OPENCODE_VERSION}-linux-amd64.deb
 Bun, Node.js и исходники для запуска не нужны. Работа оплачивается с API-баланса LAMA.
 Не запускайте приложение через sudo или с --no-sandbox.
 
-Обновление: закройте приложение и установите новый .deb той же командой apt install.
-Автообновления пока отключены. Настройки и диалоги сохраняются локально;
+Обновление: приложение проверяет новые версии при запуске и каждые 10 минут.
+Нажмите «Установить и перезапустить», когда обновление загружено. Ubuntu может
+запросить пароль для установки пакета. Ручной способ: установить новый .deb
+той же командой apt install. Настройки и диалоги сохраняются локально;
 между компьютерами они автоматически не синхронизируются.
 
 Удаление: sudo apt remove ohmycode-dev
@@ -33,4 +35,6 @@ Bun, Node.js и исходники для запуска не нужны. Раб
 Подробная инструкция: https://github.com/warcivil/ohmycode/blob/v2/INSTALL-UBUNTU.md
 `,
 )
+if (!(await Bun.file(join(root, "packages/desktop/dist/latest-linux.yml")).exists()))
+  throw new Error("Ubuntu update manifest was not generated")
 console.log("Ubuntu package ready in packages/desktop/dist")

@@ -42,6 +42,12 @@ function trimFilter(dir: string, config: Configuration) {
 test.each(channels)("channel identity for $channel", async ({ channel, appId, packageName }) => {
   const config = await load(channel)
   expect(config.appId).toBe(appId)
+  expect(config.publish).toEqual({
+    provider: "generic",
+    url: `https://ohmylama.ru/api/uploads/ohmycode-updates/${channel}`,
+    channel: "latest",
+  })
+  expect(config.generateUpdatesFilesForAllChannels).toBe(false)
   expect(config.extraMetadata?.desktopName).toBe(`${appId}.desktop`)
   expect(config.linux?.executableName).toBe(appId)
   expect(config.linux?.desktop?.entry?.StartupWMClass).toBe(appId)
