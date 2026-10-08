@@ -32,7 +32,7 @@ Bun, Node.js и исходники для запуска не нужны. Раб
 Удаление: sudo apt remove ohmycode-dev
 Личные данные остаются в ~/.config/ru.ohmylama.ohmycode.dev
 
-Подробная инструкция: https://github.com/warcivil/ohmycode/blob/v2/INSTALL-UBUNTU.md
+Подробная инструкция: https://github.com/warcivil/ohmycode/blob/windows-installer/INSTALL-UBUNTU.md
 `,
 )
 if (!(await Bun.file(join(root, "packages/desktop/dist/latest-linux.yml")).exists()))
