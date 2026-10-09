@@ -231,7 +231,7 @@ export type ModelReasoningField = "reasoning" | "reasoning_content" | "reasoning
 
 export type ModelMaxTokensField = "max_completion_tokens" | "max_tokens"
 
-export type ModelCapabilities = { tools: boolean; input: Array<string>; output: Array<string> }
+export type ModelCapabilities = { tools: boolean; reasoning?: boolean; input: Array<string>; output: Array<string> }
 
 export type MoneyUSDPerMillionTokens = number
 

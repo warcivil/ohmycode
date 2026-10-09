@@ -39,6 +39,30 @@ describe("normalizeAgentList", () => {
 })
 
 describe("normalizeProviderList", () => {
+  test.each([true, false, undefined])(
+    "preserves reasoning support %p independently of selectable modes",
+    (reasoning) => {
+      const result = normalizeProviderList(
+        [{ id: "ohmylama", name: "LAMA" }] as ProviderListOutput["data"],
+        [
+          {
+            id: "glm-5.3",
+            modelID: "glm-5.3",
+            enabled: true,
+            providerID: "ohmylama",
+            name: "GLM-5.3",
+            time: { released: 0 },
+            capabilities: { tools: true, reasoning, input: ["text"], output: ["text"] },
+            variants: [],
+            cost: [],
+            status: "active",
+            limit: { context: 1000000, output: 128000 },
+          },
+        ] as ModelListOutput["data"],
+      )
+      expect(result.all.get("ohmylama")?.models["glm-5.3"].capabilities.reasoning).toBe(reasoning ?? false)
+    },
+  )
   test("groups current models into the app provider catalog", () => {
     const result = normalizeProviderList(
       [{ id: "openai", name: "OpenAI", package: "@ai-sdk/openai" }] as ProviderListOutput["data"],

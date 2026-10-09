@@ -16,8 +16,51 @@ const methodID = Integration.MethodID.make("lama-device")
 test("LAMA catalog includes images, tools, Grok, and retail costs", () => {
   const models = lamaModels()
   expect(models.some((m) => m.id === "grok-4.7")).toBe(true)
-  expect(models.every((m) => m.capabilities.tools && m.capabilities.input.includes("image"))).toBe(true)
+  expect(models.every((m) => m.capabilities.tools)).toBe(true)
+  expect(models.find((m) => m.id === "glm-5.3")?.capabilities.reasoning).toBe(true)
+  expect(models.find((m) => m.id === "qwen3.8-max")?.capabilities.reasoning).toBe(true)
+  for (const [id, image] of [
+    ["gpt-6.1-sol", true],
+    ["claude-haiku-5.5", true],
+    ["qwen3.8-max", true],
+    ["glm-5.3", false],
+    ["glm-5.3-flash", true],
+    ["glm-5.2", false],
+    ["deepseek-v4-pro", false],
+    ["deepseek-v4.1-flash", true],
+    ["minimax-m2.5", false],
+    ["minimax-m3", true],
+  ] as const) {
+    expect(models.find((m) => m.id === id)?.capabilities.input.includes("image")).toBe(image)
+  }
+  for (const id of ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "claude-haiku-5.5"]) {
+    expect(models.some((m) => m.id === id)).toBe(true)
+  }
   expect(models.every((m) => m.cost.length > 0 && m.cost[0].input > 0 && m.cost[0].output > 0)).toBe(true)
+})
+
+test("LAMA exposes selectable reasoning effort only for supported models", () => {
+  const models = lamaModels()
+  for (const [id, expected] of [
+    ["gpt-6.1-sol", ["low", "medium", "high", "xhigh", "max"]],
+    ["gpt-6-luna", ["none", "low", "medium", "high", "xhigh", "max"]],
+    ["claude-sonnet-5.5", ["low", "medium", "high", "xhigh", "max"]],
+    ["claude-sonnet-4.6", ["low", "medium", "high", "max"]],
+    ["claude-haiku-4.5", []],
+    ["gemini-3.8-flash", ["low", "medium", "high"]],
+    ["grok-4.7", ["low", "medium", "high", "xhigh"]],
+    ["glm-5.3", ["low", "high", "max"]],
+    ["glm-5.2", ["high", "max"]],
+    ["kimi-k3", ["low", "high", "max"]],
+    ["deepseek-v4.1-flash", ["none", "low", "high", "max"]],
+    ["qwen3.8-max", []],
+    ["minimax-m3", []],
+    ["minimax-m2.7", []],
+  ] as const) {
+    const variants = models.find((model) => model.id === id)?.variants
+    expect(variants?.map((variant) => String(variant.id))).toEqual([...expected])
+    expect(variants?.map((variant) => variant.settings?.reasoningEffort)).toEqual([...expected])
+  }
 })
 
 test("LAMA exposes manufacturer windows separately from the compaction threshold", () => {
@@ -43,6 +86,7 @@ it.live("website login stores the issued key as a native credential", () =>
       globalThis.fetch = Object.assign(
         async (input: string | URL | Request) => {
           const url = String(input)
+          if (url.endsWith("/api/models/desktop")) return new Response(null, { status: 503 })
           calls.push(url)
           if (url.endsWith("/start"))
             return Response.json({
@@ -101,6 +145,7 @@ it.live("account RPC uses the active credential and never returns its secret", (
       ]
       globalThis.fetch = Object.assign(
         async (input: string | URL | Request, init?: RequestInit) => {
+          if (String(input).endsWith("/api/models/desktop")) return new Response(null, { status: 503 })
           expect(String(input)).toBe("https://ohmylama.ru/v1/account")
           authorization.push(new Headers(init?.headers).get("Authorization") ?? "")
           return replies.shift() ?? new Response(null, { status: 500 })

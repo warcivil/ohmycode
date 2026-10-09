@@ -86,6 +86,7 @@ export const Compatibility = Schema.Struct({
 export interface Capabilities extends Schema.Schema.Type<typeof Capabilities> {}
 export const Capabilities = Schema.Struct({
   tools: Schema.Boolean,
+  reasoning: Schema.Boolean.pipe(optional),
   input: Schema.Array(Schema.String),
   output: Schema.Array(Schema.String),
 })

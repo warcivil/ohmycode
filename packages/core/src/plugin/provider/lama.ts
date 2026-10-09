@@ -1,12 +1,15 @@
 import { LamaAccountRpc } from "@opencode/schema/lama-account"
 import { define } from "@opencode/plugin/effect/plugin"
-import { Effect, Schema } from "effect"
+import { Effect, Schema, Schedule } from "effect"
+import { Path } from "@opencode/util/global"
+import path from "node:path"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
 import { Model } from "../../model.js"
 import { Provider } from "../../provider.js"
 import { Money } from "@opencode/schema/money"
 import catalog from "./lama-catalog.js"
+import { createLamaDiscovery, type LamaCatalog } from "./lama-discovery.js"
 
 const providerID = Provider.ID.make("ohmylama")
 const methodID = Integration.MethodID.make("lama-device")
@@ -21,9 +24,38 @@ const Device = Schema.Struct({
 })
 const Token = Schema.Struct({ api_key: Schema.String.check(Schema.isPattern(/^sk-lama-[a-zA-Z0-9]+$/)) })
 
-export function lamaModels() {
+export function lamaModels(remote?: LamaCatalog): Model.Info[] {
+  if (remote)
+    return remote.models.map((item) => ({
+      ...Model.Info.default(providerID, Model.ID.make(item.id)),
+      name: item.name,
+      status: item.status,
+      capabilities: {
+        tools: item.tools,
+        reasoning: item.reasoning.supported,
+        input: [...item.input],
+        output: [...item.output],
+      },
+      variants: item.reasoning.effort.map((effort) => ({
+        id: Model.VariantID.make(effort),
+        settings: { reasoningEffort: effort },
+      })),
+      limit: { ...item.limits },
+      cost: [
+        {
+          input: Money.USDPerMillionTokens.make(item.pricing.input),
+          output: Money.USDPerMillionTokens.make(item.pricing.output),
+          cache: {
+            read: Money.USDPerMillionTokens.make(item.pricing.cache_read),
+            write: Money.USDPerMillionTokens.make(item.pricing.cache_write),
+          },
+        },
+      ],
+    }))
   const prices: Record<string, number[]> = catalog.prices
   const limits: Record<string, Model.Info["limit"]> = catalog.limits
+  const features: Record<string, { image: boolean; tools: boolean; reasoning: boolean; effort: string[] }> =
+    catalog.features
   return catalog.models.map((id) => {
     const prefix = Object.keys(prices)
       .filter((key) => id.startsWith(key))
@@ -33,6 +65,16 @@ export function lamaModels() {
     return {
       ...Model.Info.default(providerID, Model.ID.make(id)),
       name: id,
+      capabilities: {
+        tools: features[id].tools,
+        reasoning: features[id].reasoning,
+        input: features[id].image ? ["text", "image"] : ["text"],
+        output: ["text"],
+      },
+      variants: features[id].effort.map((effort) => ({
+        id: Model.VariantID.make(effort),
+        settings: { reasoningEffort: effort },
+      })),
       limit: { ...limits[id] },
       cost: price
         ? [
@@ -51,6 +93,9 @@ export const LamaPlugin = define({
   id: "ohmycode.provider.lama",
   effect: Effect.fn(function* (ctx) {
     const credentials = yield* Credential.Service
+    const discovery = createLamaDiscovery(path.join(Path.cache, "lama-models-v1.json"))
+    const cached = yield* Effect.promise(() => discovery.read())
+    const inventory = { models: mergeLamaModels(lamaModels(), cached), revision: cached?.revision }
     yield* ctx.rpc
       .register(LamaAccountRpc, {
         get: () =>
@@ -149,8 +194,32 @@ export const LamaPlugin = define({
           package: "@opencode/ai/providers/openai-compatible",
           settings: { baseURL: `${root}/v1` },
         },
-        models: lamaModels(),
+        models: inventory.models,
       })
     })
+    const refresh = Effect.gen(function* () {
+      const remote = yield* Effect.tryPromise(() => discovery.refresh())
+      if (!remote || remote.revision === inventory.revision) return
+      inventory.models = mergeLamaModels(inventory.models, remote)
+      inventory.revision = remote.revision
+      yield* ctx.provider.reload()
+    })
+    yield* refresh.pipe(Effect.ignore, Effect.repeat(Schedule.spaced("1 hour")), Effect.forkScoped)
   }),
 })
+
+function mergeLamaModels(previous: Model.Info[], remote?: LamaCatalog): Model.Info[] {
+  if (!remote) return previous
+  const models = lamaModels(remote)
+  const ids = new Set(models.map((model) => model.id))
+  // Retain definitions for old conversations without changing the user's selection.
+  return [
+    ...models,
+    ...previous
+      .filter((model) => !ids.has(model.id))
+      .map((model) => ({
+        ...model,
+        status: "deprecated" as const,
+      })),
+  ]
+}
