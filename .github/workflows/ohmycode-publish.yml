@@ -57,4 +57,20 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s\n' 'OhMyCode update: download progress and a copyable Telegram pairing link. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
-          gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease
+          for attempt in 1 2 3; do
+            if gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease 2> publish-error.txt; then
+              exit 0
+            fi
+            cat publish-error.txt
+            if gh release view "ohmycode-$BUILD_VERSION" --repo "$GH_REPO" >/dev/null 2>&1; then
+              echo "::error::Release exists after a failed upload; inspect its assets before retrying."
+              exit 1
+            fi
+            sleep 5
+          done
+          python3 - <<'PYERROR'
+          from pathlib import Path
+          error=Path('publish-error.txt').read_text().replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print('::error::'+error)
+          PYERROR
+          exit 1
