@@ -70,6 +70,14 @@ function SettingsPairing(props: { client: Client }) {
 
   const remoteInfo = () => remote.isSuccess ? remote.data : undefined
 
+  const copyRemote = useMutation(() => ({
+    mutationFn: async (url: string) => {
+      await ctx.system.copy(url)
+
+      return url
+    },
+  }))
+
   const updateRemote = useMutation(() => ({
     mutationFn: async (action: "pair" | "confirm" | "disconnect") => {
       if (action === "pair") await props.client.remotePair({ signal: ctx.signal })
@@ -118,6 +126,9 @@ function SettingsPairing(props: { client: Client }) {
               <div class="flex flex-wrap gap-2">
                 <Show when={info().url}>
                   <Button variant="neutral" onClick={() => ctx.system.openExternal(info().url)}>{ctx.t("remote.open")}</Button>
+                  <Button variant="neutral" disabled={copyRemote.isPending} onClick={() => copyRemote.mutate(info().url)}>
+                    {ctx.t(copyRemote.isSuccess && copyRemote.data === info().url ? "common.copied" : "remote.copyLink")}
+                  </Button>
                 </Show>
                 <Show when={info().state === "confirm"}>
                   <Button variant="contrast" disabled={updateRemote.isPending} onClick={() => updateRemote.mutate("confirm")}>
@@ -132,6 +143,9 @@ function SettingsPairing(props: { client: Client }) {
               </div>
             </div>
           )}</Show>
+          <Show when={copyRemote.error}>
+            <p class="text-text-danger-base" role="alert">{ctx.t("copy.error")}</p>
+          </Show>
           <Show when={remote.error || updateRemote.error}>
             <p class="text-text-danger-base" role="alert">{ctx.t("remote.error")}</p>
           </Show>

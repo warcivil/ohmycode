@@ -42,7 +42,17 @@ export const make = Effect.fn("Updater.platform")(function* (channel: "local" | 
       },
       catch: (error) => error,
     }),
-    stageUpdate,
+    stageUpdate: (options) =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => {
+          updateClient.on("download-progress", options.progress)
+        }),
+        () => stageUpdate(options),
+        () =>
+          Effect.sync(() => {
+            updateClient.removeListener("download-progress", options.progress)
+          }),
+      ),
     installAndRestart,
   } satisfies Platform
 })

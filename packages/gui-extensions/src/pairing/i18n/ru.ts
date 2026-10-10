@@ -1,4 +1,5 @@
 export default {
+  "remote.copyLink": "Копировать ссылку",
   "remote.title": "Управление через Telegram",
   "remote.description": "Отправляйте задачи на этот компьютер из Telegram. OhMyCode должен оставаться открытым. Разрешения на действия работают как в приложении.",
   "remote.connect": "Подключить Telegram",

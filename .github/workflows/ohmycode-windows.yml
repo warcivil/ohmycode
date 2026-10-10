@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       OHMYCODE_BUILD_CHANNEL: prod
-      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.18
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.19
       OPENCODE_CHANNEL: prod
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       NODE_OPTIONS: --max-old-space-size=6144

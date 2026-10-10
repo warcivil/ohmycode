@@ -1,4 +1,5 @@
 export default {
+  "remote.copyLink": "Copy link",
   "remote.title": "Telegram remote control",
   "remote.description": "Send tasks to this computer from Telegram. OhMyCode must remain open. Your existing action permissions still apply.",
   "remote.connect": "Connect Telegram",

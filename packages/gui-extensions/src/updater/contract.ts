@@ -1,11 +1,22 @@
 import { Schema } from "effect"
 import { Ipc } from "../sdk"
 
+export const DownloadProgress = Schema.Struct({
+  transferred: Schema.Number,
+  total: Schema.Number,
+})
+
+export type DownloadProgress = typeof DownloadProgress.Type
+
 export const UpdaterState = Schema.Union([
   Schema.Struct({ status: Schema.Literal("disabled") }),
   Schema.Struct({ status: Schema.Literal("idle") }),
   Schema.Struct({ status: Schema.Literal("checking") }),
-  Schema.Struct({ status: Schema.Literal("downloading"), version: Schema.String }),
+  Schema.Struct({
+    status: Schema.Literal("downloading"),
+    version: Schema.String,
+    progress: Schema.optional(DownloadProgress),
+  }),
   Schema.Struct({ status: Schema.Literal("ready"), version: Schema.String }),
   Schema.Struct({ status: Schema.Literal("download-required"), version: Schema.String }),
   Schema.Struct({ status: Schema.Literal("up-to-date") }),

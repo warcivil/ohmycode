@@ -1,5 +1,5 @@
 import { Deferred, Effect, Exit, Fiber } from "effect"
-import type { UpdaterState } from "./contract"
+import type { DownloadProgress, UpdaterState } from "./contract"
 
 export type UpdateTarget =
   | { readonly mode: "restart"; readonly version: string }
@@ -7,7 +7,10 @@ export type UpdateTarget =
 
 export type Platform = {
   readonly checkForUpdate: Effect.Effect<UpdateTarget | undefined, unknown>
-  readonly stageUpdate: (options: { readonly differential: boolean }) => Effect.Effect<unknown, unknown>
+  readonly stageUpdate: (options: {
+    readonly differential: boolean
+    readonly progress: (value: DownloadProgress) => void
+  }) => Effect.Effect<unknown, unknown>
   /** Starts quitAndInstall; succeeds once the app begins quitting for the update. */
   readonly installAndRestart: Effect.Effect<void, unknown>
   readonly externalInstall?: (url: string) => Effect.Effect<void, unknown>
@@ -34,7 +37,8 @@ export const make = Effect.fn("Updater.make")(function* (dependencies: Dependenc
   let installing: Deferred.Deferred<void, unknown> | undefined
 
   const transition = (next: UpdaterState) => {
-    runFork(Effect.logInfo("updater state changed", { from: state.status, to: next.status }))
+    if (state.status !== next.status)
+      runFork(Effect.logInfo("updater state changed", { from: state.status, to: next.status }))
     state = next
     dependencies.changed(state)
 
@@ -55,7 +59,17 @@ export const make = Effect.fn("Updater.make")(function* (dependencies: Dependenc
           staged: downloaded,
           version,
         })
-      yield* platform.stageUpdate({ differential: !downloaded })
+      yield* platform.stageUpdate({
+        differential: !downloaded,
+        progress: (progress) => {
+          if (state.status !== "downloading" || state.version !== version) return
+
+          if (!Number.isFinite(progress.total) || progress.total <= 0 || !Number.isFinite(progress.transferred)) return
+          const transferred = Math.max(0, Math.min(progress.total, progress.transferred))
+
+          transition({ status: "downloading", version, progress: { total: progress.total, transferred } })
+        },
+      })
       downloaded = version
       yield* dependencies.persistence.set({ version })
     })
@@ -156,12 +170,13 @@ export const make = Effect.fn("Updater.make")(function* (dependencies: Dependenc
     const deferred = Deferred.makeUnsafe<UpdaterState>()
     pending = deferred
 
-    const update =
-      state.status === "ready"
-        ? refreshStaged(platform, state.version)
-        : state.status === "download-required"
-          ? refreshExternal(platform)
-          : findAndStage(platform)
+    const update = (() => {
+      if (state.status === "ready") return refreshStaged(platform, state.version)
+
+      if (state.status === "download-required") return refreshExternal(platform)
+
+      return findAndStage(platform)
+    })()
 
     return update.pipe(
       Effect.tap((result) => Deferred.succeed(deferred, result)),

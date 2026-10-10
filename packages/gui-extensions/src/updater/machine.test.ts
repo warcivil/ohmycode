@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Exit, Scope } from "effect"
-import type { UpdaterState } from "./contract"
+import type { DownloadProgress, UpdaterState } from "./contract"
 import { make, type Dependencies } from "./machine"
 
 const scopes: Scope.Closeable[] = []
@@ -17,7 +17,7 @@ async function setup(input?: {
   ready?: { version: string }
   /** The release each platform check finds, in order; the last one repeats. "offline" fails the check. */
   checks?: readonly string[]
-  stage?: () => Promise<void>
+  stage?: (progress: (value: DownloadProgress) => void) => Promise<void>
   install?: () => Promise<void>
   external?: boolean
   open?: () => Promise<void>
@@ -47,7 +47,7 @@ async function setup(input?: {
       stageUpdate: (options) =>
         Effect.tryPromise(async () => {
           calls.push(options.differential ? "download" : "download:full")
-          await input?.stage?.()
+          await input?.stage?.(options.progress)
         }),
       installAndRestart: Effect.suspend(() => {
         calls.push(`install:${store.ready?.version}`)
@@ -310,4 +310,36 @@ describe("updater", () => {
     expect(attempts.count).toBe(2)
     expect(app.state()).toEqual({ status: "installing", version: "2.0.0" })
   })
+})
+
+test("download progress is live, bounded, and cleared after a failed attempt and retry", async () => {
+  const callbacks: ((value: DownloadProgress) => void)[] = []
+
+  const updater = await setup({
+    stage: async (progress) => {
+      callbacks.push(progress)
+      progress({ transferred: 30, total: 100 })
+      progress({ transferred: 50, total: 0 })
+      progress({ transferred: Number.NaN, total: 100 })
+      progress({ transferred: 150, total: 100 })
+
+      if (callbacks.length === 1) throw new Error("network changed")
+    },
+  })
+
+  await updater.start()
+  expect(updater.state().status).toBe("error")
+  const states = updater.seen.filter((state) => state.status === "downloading")
+  expect(states.map((state) => state.progress)).toEqual([
+    undefined,
+    { transferred: 30, total: 100 },
+    { transferred: 100, total: 100 },
+  ])
+  callbacks[0]?.({ transferred: 80, total: 100 })
+  expect(updater.state().status).toBe("error")
+  await updater.check()
+  expect(updater.state()).toEqual({ status: "ready", version: "2.0.0" })
+  expect(updater.seen.filter((state) => state.status === "downloading")[3]?.progress).toBeUndefined()
+  callbacks[1]?.({ transferred: 90, total: 100 })
+  expect(updater.state().status).toBe("ready")
 })
