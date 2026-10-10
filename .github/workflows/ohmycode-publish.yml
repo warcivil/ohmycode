@@ -5,7 +5,7 @@ on:
       run_id:
         description: Successful OhMyCode Windows build run ID
         required: true
-        default: "38061386094"
+        default: "38065000070"
   push:
     branches: [v2]
     paths: [".github/workflows/ohmycode-publish.yml"]
@@ -21,7 +21,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      BUILD_RUN: ${{ inputs.run_id || '38061386094' }}
+      BUILD_RUN: ${{ inputs.run_id || '38065000070' }}
     steps:
       - name: Verify build provenance and download artifact
         run: |
@@ -56,5 +56,5 @@ jobs:
       - name: Publish immutable release assets
         run: |
           set -euo pipefail
-          printf '%s\n' 'Public alpha: Telegram remote control for OhMyCode. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
+          printf '%s\n' 'OhMyCode update: download progress and a copyable Telegram pairing link. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
           gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease
