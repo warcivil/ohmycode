@@ -6,7 +6,16 @@ import type definition from "./index"
 /** The display sleep blocker this instance holds, if any. */
 type Blocker = { id?: number }
 
-const setup: MainSetup<typeof definition> = (ctx) => {
+const setup: MainSetup<typeof definition> = async (ctx) => {
+  const { RemoteControl } = await import("./remote")
+
+  if (ctx.scope.signal.aborted) return
+  const remote = new RemoteControl(ctx.stores.remote, () => ctx.serverEndpoints.get("sidecar"))
+  ctx.scope.addFinalizer(() => remote.close())
+  await remote.listen()
+
+  if (ctx.scope.signal.aborted) return
+  remote.start()
   const stored = ctx.stores.keepScreenActive
   const blocker: Blocker = {}
 
@@ -36,6 +45,10 @@ const setup: MainSetup<typeof definition> = (ctx) => {
   }
 
   ctx.provide(Pairing, {
+    remoteStatus: () => remote.status(),
+    remotePair: () => remote.pair(),
+    remoteConfirm: (user) => remote.confirm(user),
+    remoteDisconnect: () => remote.disconnect(),
     info: async () => ({ urls: (await (await client()).server.info()).urls }),
     code: async () => (await (await client()).server.pair()).code,
     screenActive: () => blocker.id !== undefined && powerSaveBlocker.isStarted(blocker.id),

@@ -1,3 +1,4 @@
+import { Match } from "effect"
 import { Button } from "@opencode/ui/button"
 import { Dialog, DialogBody, DialogHeader, DialogTitleGroup } from "@opencode/ui/dialog"
 import { Icon } from "@opencode/ui/icon"
@@ -61,6 +62,30 @@ function SettingsPairing(props: { client: Client }) {
     onSuccess: (_, enabled) => queryClient.setQueryData([ctx.id, "screen-active"], enabled),
   }))
 
+  const remote = useQuery(() => ({
+    queryKey: [ctx.id, "remote"],
+    queryFn: (input) => props.client.remoteStatus({ signal: input.signal }),
+    refetchInterval: 2000,
+  }))
+
+  const remoteInfo = () => remote.isSuccess ? remote.data : undefined
+
+  const updateRemote = useMutation(() => ({
+    mutationFn: async (action: "pair" | "confirm" | "disconnect") => {
+      if (action === "pair") await props.client.remotePair({ signal: ctx.signal })
+
+      if (action === "disconnect") await props.client.remoteDisconnect({ signal: ctx.signal })
+
+      if (action === "confirm") {
+        const user = remoteInfo()?.user
+
+        if (!user) throw new Error("No Telegram account to confirm")
+        await props.client.remoteConfirm(user, { signal: ctx.signal })
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ctx.id, "remote"] }),
+  }))
+
   return (
     <>
       <div class="settings-tab-header">
@@ -73,6 +98,44 @@ function SettingsPairing(props: { client: Client }) {
       </div>
 
       <div class="settings-tab-body settings-tab-body--sectioned">
+        <section class="settings-section" aria-label={ctx.t("remote.title")}>
+          <div data-component="settings-list">
+            <Row title={ctx.t("remote.title")} description={ctx.t("remote.description")}>
+              <Button variant="neutral" disabled={updateRemote.isPending || remote.isPending || remoteInfo()?.state === "connected" || remoteInfo()?.state === "confirm"} onClick={() => updateRemote.mutate("pair")}>
+                {ctx.t("remote.connect")}
+              </Button>
+            </Row>
+          </div>
+          <Show when={remoteInfo()}>{(info) => (
+            <div class="flex flex-col gap-3 px-4 py-3">
+              <p class="text-12-regular text-v2-text-text-muted">
+                {Match.value(info().state).pipe(
+                  Match.when("confirm", () => ctx.t("remote.confirmAccount", { name: info().name, id: String(info().user) })),
+                  Match.when("connected", () => ctx.t("remote.connected", { name: info().name })),
+                  Match.orElse((state) => ctx.t(`remote.${state}`)),
+                )}
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <Show when={info().url}>
+                  <Button variant="neutral" onClick={() => ctx.system.openExternal(info().url)}>{ctx.t("remote.open")}</Button>
+                </Show>
+                <Show when={info().state === "confirm"}>
+                  <Button variant="contrast" disabled={updateRemote.isPending} onClick={() => updateRemote.mutate("confirm")}>
+                    {ctx.t("remote.confirm")}
+                  </Button>
+                </Show>
+                <Show when={info().state !== "off"}>
+                  <Button variant="neutral" disabled={updateRemote.isPending} onClick={() => updateRemote.mutate("disconnect")}>
+                    {ctx.t("remote.disconnect")}
+                  </Button>
+                </Show>
+              </div>
+            </div>
+          )}</Show>
+          <Show when={remote.error || updateRemote.error}>
+            <p class="text-text-danger-base" role="alert">{ctx.t("remote.error")}</p>
+          </Show>
+        </section>
         <section class="settings-section" aria-label={ctx.t("connection")}>
           <div data-component="settings-list">
             <Row title={ctx.t("connection")} description={ctx.t("local.description")}>

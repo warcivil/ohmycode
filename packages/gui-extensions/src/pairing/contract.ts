@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Ipc } from "../sdk"
+import { RemoteStatus } from "./remote-contract"
 
 export const PairingInfo = Schema.Struct({ urls: Schema.Array(Schema.String) })
 
@@ -7,6 +8,10 @@ export const PairingInfo = Schema.Struct({ urls: Schema.Array(Schema.String) })
 export const Pairing = Ipc.define({
   id: "pairing",
   methods: {
+    remoteStatus: { output: RemoteStatus },
+    remotePair: {},
+    remoteConfirm: { input: Schema.Number },
+    remoteDisconnect: {},
     /** The local server's advertised URLs. */
     info: { output: PairingInfo },
     /** A single-use code for an `/auth/connect/:code` link. */

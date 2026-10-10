@@ -8,6 +8,12 @@ export const LamaAccount = Schema.Union([
 
 export const LamaAccountRpc = Rpc.define({
   id: "ohmycode.account",
-  methods: { get: { input: Schema.Struct({}), output: LamaAccount } },
+  methods: {
+    get: { input: Schema.Struct({}), output: LamaAccount },
+    transcribe: {
+      input: Schema.Struct({ file: Schema.String }),
+      output: Schema.Struct({ text: Schema.String, error: Schema.optional(Schema.String) }),
+    },
+  },
   events: {},
 })

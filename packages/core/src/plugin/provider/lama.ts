@@ -2,6 +2,7 @@ import { LamaAccountRpc } from "@opencode/schema/lama-account"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Effect, Schema, Schedule } from "effect"
 import { Path } from "@opencode/util/global"
+import { readFile, realpath, stat } from "node:fs/promises"
 import path from "node:path"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
@@ -98,6 +99,34 @@ export const LamaPlugin = define({
     const inventory = { models: mergeLamaModels(lamaModels(), cached), revision: cached?.revision }
     yield* ctx.rpc
       .register(LamaAccountRpc, {
+        transcribe: (input) => Effect.gen(function* () {
+          const saved = (yield* credentials.list(Integration.ID.make(providerID))).at(-1)?.value
+          const key = saved?.type === "key" ? saved.key : saved?.type === "oauth" ? saved.access : process.env.LAMA_API_KEY
+
+          if (!key) return { text: "", error: "Подключите аккаунт LAMA для распознавания голосовых." }
+          return yield* Effect.tryPromise(async (signal) => {
+            if (!process.env.XDG_DATA_HOME) throw new Error("Desktop storage unavailable")
+            const directory = await realpath(path.join(process.env.XDG_DATA_HOME, "opencode", "telegram-inbox"))
+            const file = await realpath(input.file)
+            const relative = path.relative(directory, file)
+
+            if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Invalid voice attachment")
+            const info = await stat(file)
+
+            if (!info.isFile() || info.size > 20_000_000) throw new Error("Invalid voice attachment size")
+            const form = new FormData()
+            form.set("model", "nova-2")
+            form.set("file", new Blob([await readFile(file)], { type: "audio/ogg" }), "voice.ogg")
+            const response = await fetch(`${root}/v1/audio/transcriptions`, {
+              method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form,
+              signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]), redirect: "error",
+            })
+
+            if (!response.ok) return { text: "", error: "Не удалось распознать голосовое. Проверьте API-баланс и повторите попытку." }
+
+            return Schema.decodeUnknownSync(Schema.Struct({ text: Schema.String }))(await response.json())
+          })
+        }).pipe(Effect.catch(() => Effect.succeed({ text: "", error: "Сервис распознавания временно недоступен. Отправьте задачу текстом или повторите голосовое." }))),
         get: () =>
           Effect.gen(function* () {
             const saved = (yield* credentials.list(Integration.ID.make(providerID))).at(-1)?.value

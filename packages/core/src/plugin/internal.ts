@@ -75,6 +75,7 @@ import { McpResourceTools } from "../tool/plugin/mcp-resource.js"
 import { OpenCodeTools } from "../tool/plugin/opencode.js"
 import { QuestionTool } from "../tool/plugin/question.js"
 import { ReadToolFileSystem } from "../tool/read-filesystem.js"
+import { TelegramTool } from "../tool/plugin/telegram.js"
 import { ReadTool } from "../tool/plugin/read.js"
 import { ShellTool } from "../tool/plugin/shell.js"
 import { SkillTool } from "../tool/plugin/skill.js"
@@ -236,6 +237,7 @@ const pre = [
   McpResourceTools.Plugin,
   QuestionTool.Plugin,
   ReadTool.Plugin,
+  TelegramTool.Plugin,
   ShellTool.Plugin,
   SkillTool.Plugin,
   SubagentTool.Plugin,

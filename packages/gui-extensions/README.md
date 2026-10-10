@@ -463,6 +463,7 @@ Pairing shows another device how to reach this machine's server, and keeps the d
 ```ts
 import { Schema } from "effect"
 import { Ipc } from "../sdk"
+import { RemoteStatus } from "./remote-contract"
 
 export const PairingInfo = Schema.Struct({ urls: Schema.Array(Schema.String) })
 
@@ -470,6 +471,10 @@ export const PairingInfo = Schema.Struct({ urls: Schema.Array(Schema.String) })
 export const Pairing = Ipc.define({
   id: "pairing",
   methods: {
+    remoteStatus: { output: RemoteStatus },
+    remotePair: {},
+    remoteConfirm: { input: Schema.Number },
+    remoteDisconnect: {},
     /** The local server's advertised URLs. */
     info: { output: PairingInfo },
     /** A single-use code for an `/auth/connect/:code` link. */
@@ -489,15 +494,18 @@ import { Schema } from "effect"
 import { Extension, Store } from "../sdk"
 import { Pairing } from "./contract"
 import en from "./i18n/en"
+import ru from "./i18n/ru"
+import { emptyRemote, RemoteState } from "./remote-contract"
 
 export default Extension.define({
   id: "pairing",
   provides: { pairing: Pairing },
   stores: {
+    remote: Store.main(RemoteState, emptyRemote),
     // Whether main keeps the display awake; stored before in the desktop's own settings namespace.
     keepScreenActive: Store.main(Schema.Boolean, false, { state: ["opencode.settings", "keepScreenActive"] }),
   },
-  i18n: { en },
+  i18n: { en, ru },
 })
 ```
 
@@ -514,7 +522,16 @@ import type definition from "./index"
 /** The display sleep blocker this instance holds, if any. */
 type Blocker = { id?: number }
 
-const setup: MainSetup<typeof definition> = (ctx) => {
+const setup: MainSetup<typeof definition> = async (ctx) => {
+  const { RemoteControl } = await import("./remote")
+
+  if (ctx.scope.signal.aborted) return
+  const remote = new RemoteControl(ctx.stores.remote, () => ctx.serverEndpoints.get("sidecar"))
+  ctx.scope.addFinalizer(() => remote.close())
+  await remote.listen()
+
+  if (ctx.scope.signal.aborted) return
+  remote.start()
   const stored = ctx.stores.keepScreenActive
   const blocker: Blocker = {}
 
@@ -544,6 +561,10 @@ const setup: MainSetup<typeof definition> = (ctx) => {
   }
 
   ctx.provide(Pairing, {
+    remoteStatus: () => remote.status(),
+    remotePair: () => remote.pair(),
+    remoteConfirm: (user) => remote.confirm(user),
+    remoteDisconnect: () => remote.disconnect(),
     info: async () => ({ urls: (await (await client()).server.info()).urls }),
     code: async () => (await (await client()).server.pair()).code,
     screenActive: () => blocker.id !== undefined && powerSaveBlocker.isStarted(blocker.id),
