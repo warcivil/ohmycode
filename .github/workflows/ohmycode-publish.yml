@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           printf '%s\n' 'OhMyCode update: download progress and a copyable Telegram pairing link. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
           for attempt in 1 2 3; do
-            if gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease 2> publish-error.txt; then
+            if gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --verify-tag --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease 2> publish-error.txt; then
               exit 0
             fi
             cat publish-error.txt
