@@ -1,0 +1,60 @@
+name: Publish verified OhMyCode Windows assets
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful OhMyCode Windows build run ID
+        required: true
+        default: "38061386094"
+  push:
+    branches: [v2]
+    paths: [".github/workflows/ohmycode-publish.yml"]
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: ohmycode-publish-assets
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN: ${{ inputs.run_id || '38061386094' }}
+    steps:
+      - name: Verify build provenance and download artifact
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" > run.json
+          python3 - <<'PY'
+          import json, os
+          r=json.load(open('run.json'))
+          assert r['conclusion']=='success'
+          assert r['head_branch']=='v2' and r['event']=='push'
+          assert r['path']=='.github/workflows/ohmycode-windows.yml'
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write('BUILD_SHA='+r['head_sha']+'\n')
+          PY
+          gh run download "$BUILD_RUN" --repo "$GH_REPO" --name ohmycode-prod-windows-x64 --dir assets
+      - name: Verify installer manifest
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,base64,re,os
+          root=Path('assets')
+          manifest=(root/'latest.yml').read_text()
+          version=re.search(r'^version: (\S+)',manifest,re.M).group(1)
+          assert re.fullmatch(r'2\.0\.24-ohmycode\.\d+',version)
+          name='ohmycode-prod-'+version+'-win-x64.exe'
+          data=(root/name).read_bytes()
+          digest=base64.b64encode(hashlib.sha512(data).digest()).decode()
+          assert digest in manifest and name in manifest
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write('BUILD_VERSION='+version+'\n')
+          PY
+      - name: Publish immutable release assets
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'Public alpha: Telegram remote control for OhMyCode. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
+          gh release create "ohmycode-$BUILD_VERSION" assets/* --repo "$GH_REPO" --target "$BUILD_SHA" --title "OhMyCode $BUILD_VERSION" --notes-file notes.txt --prerelease
