@@ -59,7 +59,7 @@ describe("remote connector's HTTP boundary", () => {
 
       if (path === "/api/session/active") return Response.json({ data: { ses_test: { type: "running" } } })
 
-      if (path.endsWith("/message") || path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
+      if (path.endsWith("/message") || path.endsWith("/form") || path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
 
       return Response.json({ urls: [] })
     })
@@ -144,7 +144,7 @@ describe("remote connector's HTTP boundary", () => {
 
         if (path === "/api/session/active") return Response.json({ data: { ses_test: { type: "running" } } })
 
-        if (path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
+        if (path.endsWith("/form") || path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
 
         return Response.json({ urls: [] })
     })
@@ -421,14 +421,16 @@ describe("remote connector's HTTP boundary", () => {
       if (path.endsWith("/commands")) return Response.json({ commands: [{ id: "tg-40", kind: "status", session: "ses_test" }] })
 
       if (path.includes("/results/") || path.includes("/events/")) {
-        replies.push(Schema.decodeUnknownSync(Result)(await request.json()).text || "")
+        const reply = Schema.decodeUnknownSync(Result)(await request.json())
+
+        if (reply.text) replies.push(reply.text)
 
         return Response.json({ ok: true })
       }
 
       if (path === "/api/session/ses_test") return Response.json({ data: { id: "ses_test", title: "Приветствие" } })
 
-      if (path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
+      if (path.endsWith("/form") || path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
 
       if (path.endsWith("/active")) return Response.json({ data: {} })
 
@@ -578,3 +580,94 @@ async function serve(handler: (request: Request) => Promise<Response>) {
     stop(_force: boolean) { server.closeAllConnections(); server.close() },
   }
 }
+
+test.each([false, true])("question form crosses the relay boundary and resumes/cancels (%s)", async (cancel) => {
+  let announced = false
+  let answered = false
+  let accepted = false
+  const replies: string[] = []
+  const form = { id: "frm_test", sessionID: "ses_test", title: "Questions", metadata: { kind: "question" }, fields: [{ key: "q0", type: "string", title: "Format", description: "Choose", custom: true, options: [{ label: "PDF", value: "PDF" }] }] }
+
+  const server = await serve(async (request) => {
+    const path = new URL(request.url).pathname
+
+    if (path.endsWith("/device")) return Response.json({ confirmed: true, telegram_id: 10, telegram_name: "owner" })
+
+    if (path.endsWith("/commands")) return Response.json({ commands: announced && !accepted ? [{ id: "tg-900", kind: "question", session: "ses_test", form: "frm_test", answer: { q0: "PDF" }, cancel }] : [] })
+
+    if (path.includes("/device/events/questions-")) {
+      const body = Schema.decodeUnknownSync(Schema.Struct({ forms: Schema.Array(Schema.Struct({ id: Schema.String })) }))(await request.json())
+
+      if (body.forms.length) announced = true
+
+      return Response.json({ ok: true })
+    }
+
+    if (path.includes("/device/results/")) {
+      const body = Schema.decodeUnknownSync(Schema.Struct({ kind: Schema.String, finished: Schema.Boolean }))(await request.json())
+
+      expect(body.kind).toBe("question_result")
+      expect(body.finished).toBe(true)
+      accepted = true
+
+      return Response.json({ ok: true })
+    }
+
+    if (path.includes("/device/events/")) {
+      const body = Schema.decodeUnknownSync(Result)(await request.json())
+
+      if (body.text) replies.push(body.text)
+
+      return Response.json({ ok: true })
+    }
+
+    if (path.endsWith("/form/frm_test/reply") || (path.endsWith("/form/frm_test") && request.method === "DELETE")) {
+      if (!cancel) expect(await request.json()).toEqual({ answer: { q0: "PDF" } })
+      answered = true
+
+      return new Response(null, { status: 204 })
+    }
+
+    if (path.endsWith("/form/frm_test")) return Response.json({ data: { ...form, state: { status: "pending" } } })
+
+    if (path.endsWith("/form")) return Response.json({ data: answered ? [] : [form] })
+
+    if (path.endsWith("/permission") || path.endsWith("/inbox")) return Response.json({ data: [] })
+
+    if (path.endsWith("/active")) return Response.json({ data: answered ? {} : { ses_test: { type: "running" } } })
+
+    if (path.endsWith("/ses_test")) return Response.json({ data: { id: "ses_test", title: "Test" } })
+
+    if (path.endsWith("/export")) return Response.json({ data: { info: { title: "Test" }, messages: [
+      { id: "msg_remote_tg-899", type: "user" },
+      { id: "msg_answer", type: "assistant", content: [{ type: "text", text: "Continued after question" }] },
+      { id: "msg_idle", type: "idle" },
+    ] } })
+
+    if (path.endsWith("/message")) return Response.json({ data: [] })
+
+    return Response.json({})
+  })
+
+  const stored = {
+    value: Schema.decodeUnknownSync(RemoteState)({ ...emptyRemote, secret: "device-only", relay: server.url.origin, confirmed: true, watched: [{ session: "ses_test", prompt: "msg_remote_tg-899", started: Date.now() - 5000 }] }),
+    set(value: typeof RemoteState.Type) { this.value = value },
+  }
+
+  const control = new RemoteControl(stored, () => ({ url: server.url.origin, local: true, headers: { authorization: "Basic local-only" } }))
+
+  try {
+    control.start()
+    const deadline = Date.now() + 10000
+
+    while ((!accepted || stored.value.watched.length) && Date.now() < deadline) await Bun.sleep(20)
+    expect(announced).toBe(true)
+    expect(answered).toBe(true)
+    expect(accepted).toBe(true)
+    expect(replies.join(" ")).toContain("Continued after question")
+    expect(stored.value.watched).toHaveLength(0)
+  } finally {
+    control.close()
+    server.stop(true)
+  }
+}, 15000)

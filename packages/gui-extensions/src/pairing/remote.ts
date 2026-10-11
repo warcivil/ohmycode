@@ -8,7 +8,7 @@ import { basename, join } from "node:path"
 import { fileBridge, FileRequest } from "./remote-files"
 import { hostname } from "node:os"
 import { Schema } from "effect"
-import type { OpenCodeClient, PermissionListOutput, SessionMessageInfo } from "@opencode/client/promise"
+import type { OpenCodeClient, PermissionListOutput, SessionMessageInfo, FormInfo } from "@opencode/client/promise"
 import { emptyRemote, RemoteCommand, RemoteState, RemoteStatus } from "./remote-contract"
 
 const Prefix = "/api/ohmycode-remote"
@@ -29,9 +29,10 @@ type Storage = {
 type Endpoint = { url: string; headers: Readonly<Record<string, string>>; local: boolean }
 
 type Reply = {
+  forms?: { id: string; title: string; fields: Extract<FormInfo["fields"][number], { type: "string" | "multiselect" }>[] }[]
   finished?: boolean
   task?: string
-  kind?: "text" | "sessions" | "permission" | "selected" | "progress" | "stage" | "models" | "variants"
+  kind?: "text" | "sessions" | "permission" | "selected" | "progress" | "stage" | "models" | "variants" | "question_result" | "questions"
   text?: string
   model?: { id: string; providerID: string }
   variants?: string[]
@@ -53,6 +54,7 @@ export class RemoteControl {
   private online = false
   private running = false
   private readonly permissions = new Set<string>()
+  private readonly forms = new Map<string, string>()
   private readonly phases = new Map<string, string>()
   private readonly activityTimes = new Map<string, number>()
 
@@ -159,6 +161,7 @@ export class RemoteControl {
     this.connection = new AbortController()
     this.stored.set({ ...emptyRemote })
     this.permissions.clear()
+    this.forms.clear()
     this.online = false
 
     if (state.secret) await this.request(state.relay, state.secret, "/device", undefined, "DELETE").catch(() => undefined)
@@ -230,7 +233,7 @@ export class RemoteControl {
           }, 5000)
 
           const reply = await this.execute(client, command, state)
-            .catch((): Reply => ({ kind: "progress", finished: true, task: command.id, session: command.session, text: "Не удалось подтвердить выполнение команды. Проверьте /status перед повторной отправкой задачи." }))
+            .catch((): Reply => command.kind === "question" ? ({ kind: "question_result", request: command.form, finished: false, text: "Не удалось передать ответ. Проверьте /status и попробуйте снова." }) : ({ kind: "progress", finished: true, task: command.id, session: command.session, text: "Не удалось подтвердить выполнение команды. Проверьте /status перед повторной отправкой задачи." }))
             .finally(() => clearInterval(heartbeat))
 
           if (!this.live(state)) return
@@ -489,6 +492,23 @@ export class RemoteControl {
       return { text: `Работа остановлена: ${session.title}.` }
     }
 
+    if (command.kind === "question") {
+      if (!command.form) throw new Error("Missing form")
+      const form = await client.session.form.get({ sessionID: session.id, formID: command.form }, options)
+
+      if (form.state.status !== "pending") return { kind: "question_result", request: form.id, finished: true, text: "Этот вопрос уже закрыт." }
+
+      if (form.metadata?.kind !== "question") throw new Error("Not a question form")
+      const input = { sessionID: session.id, formID: form.id }
+
+      const result = await (command.cancel
+        ? client.session.form.cancel({ ...input, message: "Пользователь отменил вопрос в Telegram. Уточните задачу обычным сообщением, если необходимо." }, options)
+        : client.session.form.reply({ ...input, answer: command.answer || {} }, options))
+        .then(() => true, () => false)
+
+      return { kind: "question_result", request: form.id, finished: result, text: result ? (command.cancel ? "Вопрос отменён." : "Ответы приняты. Агент продолжает работу.") : "Не удалось принять ответ. Проверьте вопрос и попробуйте ещё раз." }
+    }
+
     if (command.kind === "permission") {
       if (!command.request || !command.decision) throw new Error("Invalid permission reply")
       await client.permission.reply({ sessionID: session.id, requestID: command.request, decision: command.decision }, options)
@@ -505,6 +525,7 @@ export class RemoteControl {
     const pending = await client.permission.list({ sessionID: session.id }, options)
 
     for (const permission of pending) await this.ask(state, session.id, permission, `${command.id}-${permission.id}`)
+    await this.questions(client, state, session.id, true)
     const active = await client.session.active(options)
     const transcript = await client.session.export({ sessionID: session.id, sanitize: false }, options)
     const last = transcript.messages.findLast((row) => row.type === "assistant")
@@ -518,6 +539,32 @@ export class RemoteControl {
       kind: "permission", session, request: permission.id,
       text: `Требуется разрешение\n${permission.action}\n${permission.resources.join("\n")}\n${permission.message || ""}`.slice(0, 23000),
     })
+  }
+
+  private async questions(client: OpenCodeClient, state: State, session: string, force = false) {
+    const options = { signal: AbortSignal.any([this.controller.signal, this.connection.signal, AbortSignal.timeout(10000)]) }
+    const pending = await client.session.form.list({ sessionID: session }, options)
+
+    const forms = pending.filter((form) => form.metadata?.kind === "question").flatMap((form) => {
+      const fields = form.fields.filter((field): field is Extract<FormInfo["fields"][number], { type: "string" | "multiselect" }> => field.type === "string" || field.type === "multiselect")
+
+      if (fields.length !== form.fields.length || !fields.length) return []
+
+      return [{ id: form.id, title: form.title, fields: fields.map((field) => ({
+        key: field.key, type: field.type, title: field.title || "", description: field.description || "",
+        custom: field.custom !== false,
+        options: (field.options || []).map((option) => ({ value: option.value, label: option.label, description: option.description || "" })),
+      })) }]
+    })
+
+    const fingerprint = JSON.stringify(forms)
+
+    if (force || this.forms.get(session) !== fingerprint) {
+      await this.request(state.relay, state.secret, `/device/events/questions-${session}-${Date.now()}`, { kind: "questions", session, forms })
+      this.forms.set(session, fingerprint)
+    }
+
+    return forms.length
   }
 
   private async stages(messages: ReadonlyArray<SessionMessageInfo>, prompt: string, state: State) {
@@ -548,6 +595,7 @@ export class RemoteControl {
 
     for (const watched of this.stored.value.watched) {
       if (!this.live(state)) return
+      const questions = await this.questions(client, state, watched.session)
       const pending = await client.permission.list({ sessionID: watched.session }, options)
 
       for (const permission of pending) {
@@ -559,10 +607,10 @@ export class RemoteControl {
       const inbox = await client.session.inbox.list({ sessionID: watched.session }, options)
       const queued = inbox.some((row) => row.id === watched.prompt)
 
-      if ((active[watched.session] || pending.length) && !queued && Date.now() - (this.activityTimes.get(watched.prompt) || 0) < 5000) continue
+      if ((active[watched.session] || pending.length || questions) && !queued && Date.now() - (this.activityTimes.get(watched.prompt) || 0) < 5000) continue
       let activity = ""
 
-      if ((active[watched.session] || pending.length) && !queued) {
+      if ((active[watched.session] || pending.length || questions) && !queued) {
         const recent = await client.message.list({ sessionID: watched.session, limit: 100, order: "desc" }, options)
         const messages = recent.data.toReversed()
         const start = messages.findIndex((row) => row.id === watched.prompt)
@@ -577,16 +625,16 @@ export class RemoteControl {
         this.activityTimes.set(watched.prompt, Date.now())
       }
 
-      const phase = pending.length ? "Требуется разрешение. Используйте кнопки под запросом или /status." : queued ? "В очереди. Агент завершает предыдущую задачу." : `Агент работает…${activity ? `\n${activity}` : ""}`
+      const phase = questions ? "Ожидаю ответ на вопрос. Выберите вариант или нажмите «Свой ответ»." : pending.length ? "Требуется разрешение. Используйте кнопки под запросом или /status." : queued ? "В очереди. Агент завершает предыдущую задачу." : `Агент работает…${activity ? `\n${activity}` : ""}`
 
-      if ((active[watched.session] || pending.length || queued) && this.phases.get(watched.prompt) !== phase) {
+      if ((active[watched.session] || pending.length || questions || queued) && this.phases.get(watched.prompt) !== phase) {
         await this.request(state.relay, state.secret, `/device/events/phase-${watched.prompt}-${Date.now()}`, {
           kind: "progress", task: watched.prompt.replace("msg_remote_", ""), session: watched.session, text: phase,
         })
         this.phases.set(watched.prompt, phase)
       }
 
-      if (active[watched.session] || pending.length || queued || Date.now() - watched.started < 3000) continue
+      if (active[watched.session] || pending.length || questions || queued || Date.now() - watched.started < 3000) continue
       const transcript = await client.session.export({ sessionID: watched.session, sanitize: false }, options)
       const start = transcript.messages.findIndex((row) => row.id === watched.prompt)
 

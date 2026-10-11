@@ -21,7 +21,7 @@ export const RemoteStatus = Schema.Struct({
 
 export const RemoteCommand = Schema.Struct({
   id: Schema.String.check(Schema.isPattern(/^tg-[0-9]+$/)),
-  kind: Schema.Literals(["sessions", "new", "prompt", "stop", "status", "permission", "models", "model", "variants", "details"]),
+  kind: Schema.Literals(["sessions", "new", "prompt", "stop", "status", "permission", "models", "model", "variants", "details", "question"]),
   session: Schema.optional(Schema.String.check(Schema.isPattern(/^ses_[a-zA-Z0-9_-]+$/))),
   text: Schema.optional(Schema.String.check(Schema.isMaxLength(16000))),
   page: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 100 }))),
@@ -35,5 +35,8 @@ export const RemoteCommand = Schema.Struct({
     mime: Schema.String.check(Schema.isMaxLength(150)),
     voice: Schema.Boolean,
   })),
+  form: Schema.optional(Schema.String.check(Schema.isPattern(/^frm_[a-zA-Z0-9_-]+$/))),
+  answer: Schema.optional(Schema.Record(Schema.String, Schema.Union([Schema.String, Schema.Array(Schema.String)]))),
+  cancel: Schema.optional(Schema.Boolean),
   decision: Schema.optional(Schema.Literals(["once", "reject"])),
 })
