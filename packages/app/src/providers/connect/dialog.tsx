@@ -982,6 +982,7 @@ function ProviderConnection(props: {
         <Button variant="neutral" icon="arrow-up-right" onClick={() => void controller.auth.open()}>
           {language.t("provider.connect.oauth.openBrowser")}
         </Button>
+        <OAuthLink />
         <form onSubmit={handleSubmit} class="flex flex-col items-start gap-5 self-stretch">
           <label class="flex w-full flex-col gap-2 font-[530] leading-4 text-v2-text-text-base">
             {language.t("provider.connect.oauth.code.label", { method: controller.currentMethod()?.label ?? "" })}
@@ -1013,6 +1014,23 @@ function ProviderConnection(props: {
     )
   }
 
+  function OAuthLink() {
+    return (
+      <Show when={controller.authorization()?.url}>
+        {(url) => (
+          <TextField
+            label={language.t("provider.connect.oauth.openBrowser")}
+            hideLabel
+            value={url()}
+            readOnly
+            copyable
+            copyKind="link"
+          />
+        )}
+      </Show>
+    )
+  }
+
   function OAuthAutoView() {
     return (
       <div class="flex flex-col gap-5 px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
@@ -1023,6 +1041,7 @@ function ProviderConnection(props: {
             {language.t("provider.connect.oauth.openBrowser")}
           </Button>
         </div>
+        <OAuthLink />
         <Show when={code()}>
           {(value) => (
             <TextField
