@@ -16,6 +16,50 @@ describe("remote connector's HTTP boundary", () => {
   const cleanup: (() => void)[] = []
   afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
 
+  test("adding website access preserves the existing Telegram identity and waits for local consent", async () => {
+    const requests: { path: string; authorization: string | null }[] = []
+    let confirmed = false
+
+    const server = await serve(async (request) => {
+      const path = new URL(request.url).pathname
+      requests.push({ path, authorization: request.headers.get("authorization") })
+
+      if (path.endsWith("/device/link")) return Response.json({ url: "https://ohmylama.ru/agents/connect#code=local-test-code" })
+
+      if (path.endsWith("/device/link/confirm")) {
+        const body = Schema.decodeUnknownSync(Schema.Struct({ confirmation: Schema.String }))(await request.json())
+        confirmed = body.confirmation === "ABC123"
+
+        return Response.json({ ok: confirmed }, { status: confirmed ? 200 : 409 })
+      }
+
+      return new Response("Unexpected route", { status: 404 })
+    })
+
+    cleanup.push(() => server.stop(true))
+
+    const stored = {
+      value: Schema.decodeUnknownSync(RemoteState)({ ...emptyRemote, secret: "same-device", relay: server.url.origin, confirmed: true, user: 42, name: "Owner", watched: [{ session: "ses_saved", prompt: "tg-10", started: 1 }] }),
+      set(value: typeof RemoteState.Type) { this.value = value },
+    }
+
+    const control = new RemoteControl(stored, () => undefined)
+    cleanup.push(() => control.close())
+    await control.pair("web")
+    expect(stored.value.secret).toBe("same-device")
+    expect(stored.value.user).toBe(42)
+    expect(stored.value.watched).toEqual([{ session: "ses_saved", prompt: "tg-10", started: 1 }])
+    expect(control.status().state).toBe("pairing")
+    expect(confirmed).toBe(false)
+    await expect(control.confirmLink("000000")).rejects.toThrow("409")
+    expect(control.status().state).toBe("pairing")
+    await control.confirmLink("ABC123")
+    expect(control.status().state).toBe("connected")
+    expect(stored.value.user).toBe(42)
+    expect(requests.every((request) => request.authorization === "Bearer same-device")).toBe(true)
+    expect(requests.some((request) => request.path.endsWith("/devices"))).toBe(false)
+  })
+
   test("incoming screenshot and voice become prompts without sending credentials to relay", async () => {
     const root = await mkdtemp(join(tmpdir(), "remote-incoming-"))
     cleanup.push(() => { void rm(root, { recursive: true, force: true }) })

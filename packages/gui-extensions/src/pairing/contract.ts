@@ -10,6 +10,8 @@ export const Pairing = Ipc.define({
   methods: {
     remoteStatus: { output: RemoteStatus },
     remotePair: {},
+    remotePairWeb: {},
+    remoteConfirmLink: { input: Schema.String },
     remoteConfirm: { input: Schema.Number },
     remoteDisconnect: {},
     /** The local server's advertised URLs. */

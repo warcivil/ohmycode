@@ -9,13 +9,13 @@ import { fileBridge, FileRequest } from "./remote-files"
 import { hostname } from "node:os"
 import { Schema } from "effect"
 import type { OpenCodeClient, PermissionListOutput, SessionMessageInfo, FormInfo } from "@opencode/client/promise"
-import { emptyRemote, RemoteCommand, RemoteState, RemoteStatus } from "./remote-contract"
+import { emptyRemote, RemoteCommand, RemoteState, RemoteStatus, RemoteLink, WebAccount } from "./remote-contract"
 
 const Prefix = "/api/ohmycode-remote"
 
 const Registration = Schema.Struct({ secret: Schema.String, url: Schema.String })
 
-const Device = Schema.Struct({ confirmed: Schema.Boolean, telegram_id: Schema.NullOr(Schema.Number), telegram_name: Schema.NullOr(Schema.String) })
+const Device = Schema.Struct({ confirmed: Schema.Boolean, telegram_id: Schema.NullOr(Schema.Number), telegram_name: Schema.NullOr(Schema.String), web_account: Schema.optional(Schema.NullOr(WebAccount)), pending_link: Schema.optional(Schema.NullOr(RemoteLink)) })
 
 const Commands = Schema.Struct({ commands: Schema.Array(RemoteCommand) })
 
@@ -106,11 +106,11 @@ export class RemoteControl {
       if (!this.live(state)) throw new Error("Connection revoked")
 
       const response = await fetch(`${state.relay}${Prefix}/device/files/${encodeURIComponent(input.id)}`, {
-        method: "POST", headers: { authorization: `Bearer ${state.secret}`, "content-type": "application/octet-stream", "x-file-name": encodeURIComponent(basename(input.path)) },
+        method: "POST", headers: { authorization: `Bearer ${state.secret}`, "content-type": "application/octet-stream", "x-file-name": encodeURIComponent(basename(input.path)), "x-session-id": input.session },
         body: bytes, signal: AbortSignal.any([this.controller.signal, this.connection.signal, AbortSignal.timeout(330000)]), redirect: "error",
       })
 
-      if (!response.ok) throw new Error("Telegram file delivery failed")
+      if (!response.ok) throw new Error("Remote chat file delivery failed")
     })
 
     if (this.controller.signal.aborted) this.closeBridge()
@@ -120,15 +120,18 @@ export class RemoteControl {
     const state = this.stored.value
 
     return {
-      state: !state.secret ? "off" : !this.online ? "offline" : state.confirmed ? "connected" : state.user ? "confirm" : "pairing",
+      state: !state.secret ? "off" : !this.online ? "offline" : state.pending ? "confirm" : state.confirmed && !state.url ? "connected" : state.user && !state.confirmed ? "confirm" : "pairing",
+      channel: state.channel || "telegram",
+      webConnected: !!state.web,
+      telegramConnected: state.confirmed && !!state.user,
+      confirmation: state.pending?.confirmation,
       url: state.url,
       user: state.user,
-      name: state.name,
+      name: state.pending?.name || (state.channel === "web" ? state.web?.name : state.name) || "",
     }
   }
 
-  async pair() {
-    if (this.stored.value.secret) await this.disconnect()
+  async pair(channel: "web" | "telegram" = "telegram") {
     const relay = new URL(process.env.OHMYCODE_REMOTE_URL || "https://ohmylama.ru")
 
     if (relay.protocol !== "https:" && !(relay.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(relay.hostname))) {
@@ -136,14 +139,27 @@ export class RemoteControl {
     }
 
     if (relay.username || relay.password || relay.pathname !== "/" || relay.search || relay.hash) throw new Error("Invalid relay origin")
-    const value = Schema.decodeUnknownSync(Registration)(await this.request(relay.origin, "", "/devices", { name: hostname().slice(0, 80) }))
+
+    const existing = this.stored.value
+
+    const value = existing.secret
+      ? { secret: existing.secret, ...Schema.decodeUnknownSync(Schema.Struct({ url: Schema.String }))(await this.request(existing.relay, existing.secret, "/device/link", { channel })) }
+      : Schema.decodeUnknownSync(Registration)(await this.request(relay.origin, "", "/devices", { name: hostname().slice(0, 80), channel }))
 
     if (this.controller.signal.aborted) return
     const link = new URL(value.url)
 
-    if (link.origin !== "https://t.me" || link.username || link.password) throw new Error("Invalid pairing link")
-    this.stored.set({ ...emptyRemote, secret: value.secret, url: value.url, relay: relay.origin })
+    if (link.username || link.password || (channel === "telegram" ? link.origin !== "https://t.me" : link.origin !== "https://ohmylama.ru" || link.pathname !== "/agents/connect")) throw new Error("Invalid pairing link")
+    this.stored.set({ ...(existing.secret ? existing : emptyRemote), secret: value.secret, url: value.url, relay: existing.secret ? existing.relay : relay.origin, channel, pending: null })
     this.online = true
+  }
+
+  async confirmLink(confirmation: string) {
+    const state = this.stored.value
+    await this.request(state.relay, state.secret, "/device/link/confirm", { confirmation })
+
+    if (this.controller.signal.aborted || this.stored.value.secret !== state.secret) return
+    this.stored.set({ ...state, confirmed: true, url: "", pending: null })
   }
 
   async confirm(user: number) {
@@ -177,12 +193,14 @@ export class RemoteControl {
     return OpenCode.make({ baseUrl: endpoint.url, headers: endpoint.headers })
   }
 
-  private async request(relay: string, secret: string, path: string, body?: Reply | { name: string } | { telegram_id: number }, method?: string) {
+  private async request(relay: string, secret: string, path: string, body?: Reply | { name: string; channel?: "web" | "telegram" } | { channel: "web" | "telegram" } | { confirmation: string } | { telegram_id: number }, method?: string) {
     if (secret && method !== "DELETE" && this.stored.value.secret !== secret) throw new Error("Connection revoked")
 
     const headers = new Headers({ "Content-Type": "application/json" })
 
     if (secret) headers.set("Authorization", `Bearer ${secret}`)
+
+    if (path === "/device/commands") headers.set("X-Remote-Capabilities", "session-files-v1")
 
     const response = await fetch(relay + Prefix + path, {
       method: method || (body ? "POST" : "GET"),
@@ -209,8 +227,8 @@ export class RemoteControl {
 
         if (this.controller.signal.aborted || this.stored.value.secret !== state.secret) return
 
-        if (state.confirmed !== device.confirmed || state.user !== device.telegram_id || state.name !== (device.telegram_name || "")) {
-          this.stored.set({ ...this.stored.value, confirmed: device.confirmed, user: device.telegram_id, name: device.telegram_name || "" })
+        if (state.confirmed !== device.confirmed || state.user !== device.telegram_id || state.name !== (device.telegram_name || "") || state.web?.account !== device.web_account?.account || state.pending?.confirmation !== device.pending_link?.confirmation) {
+          this.stored.set({ ...this.stored.value, confirmed: device.confirmed, user: device.telegram_id, name: device.telegram_name || "", web: device.web_account, pending: device.pending_link })
         }
 
         const client = await this.client()

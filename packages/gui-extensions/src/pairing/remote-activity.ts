@@ -4,7 +4,7 @@ import type { SessionMessageInfo } from "@opencode/client/promise"
 const Calls = Schema.Array(Schema.Struct({ tool: Schema.String, status: Schema.String }))
 
 const Labels: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  "telegram_send_file": ["Отправляет файл в Telegram", "Отправил файл в Telegram", "Отправка файлов"],
+  "telegram_send_file": ["Отправляет файл в чат", "Отправил файл в чат", "Отправка файлов"],
   "webfetch": ["Читает страницу", "Прочитал страницу", "Webfetch"],
   "read": ["Читает файл", "Прочитал файл", "Чтение файлов"],
   "glob": ["Ищет файлы", "Выполнил поиск файлов", "Поиск файлов"],

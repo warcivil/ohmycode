@@ -79,15 +79,20 @@ function SettingsPairing(props: { client: Client }) {
   }))
 
   const updateRemote = useMutation(() => ({
-    mutationFn: async (action: "pair" | "confirm" | "disconnect") => {
+    mutationFn: async (action: "pair" | "web" | "confirm" | "disconnect") => {
+      if (action === "web") await props.client.remotePairWeb({ signal: ctx.signal })
+
       if (action === "pair") await props.client.remotePair({ signal: ctx.signal })
 
       if (action === "disconnect") await props.client.remoteDisconnect({ signal: ctx.signal })
 
       if (action === "confirm") {
+        const confirmation = remoteInfo()?.confirmation
+
+        if (confirmation) return props.client.remoteConfirmLink(confirmation, { signal: ctx.signal })
         const user = remoteInfo()?.user
 
-        if (!user) throw new Error("No Telegram account to confirm")
+        if (!user) throw new Error("No account to confirm")
         await props.client.remoteConfirm(user, { signal: ctx.signal })
       }
     },
@@ -109,23 +114,29 @@ function SettingsPairing(props: { client: Client }) {
         <section class="settings-section" aria-label={ctx.t("remote.title")}>
           <div data-component="settings-list">
             <Row title={ctx.t("remote.title")} description={ctx.t("remote.description")}>
-              <Button variant="neutral" disabled={updateRemote.isPending || remote.isPending || remoteInfo()?.state === "connected" || remoteInfo()?.state === "confirm"} onClick={() => updateRemote.mutate("pair")}>
-                {ctx.t("remote.connect")}
-              </Button>
+              <div class="flex flex-wrap gap-2">
+                <Button variant="neutral" disabled={updateRemote.isPending || remote.isPending || remoteInfo()?.webConnected} onClick={() => updateRemote.mutate("web")}>
+                  {ctx.t(remoteInfo()?.webConnected ? "remote.webConnected" : "remote.webConnect")}
+                </Button>
+                <Button variant="neutral" disabled={updateRemote.isPending || remote.isPending || remoteInfo()?.telegramConnected} onClick={() => updateRemote.mutate("pair")}>
+                  {ctx.t(remoteInfo()?.telegramConnected ? "remote.telegramConnected" : "remote.connect")}
+                </Button>
+              </div>
             </Row>
           </div>
           <Show when={remoteInfo()}>{(info) => (
             <div class="flex flex-col gap-3 px-4 py-3">
               <p class="text-12-regular text-v2-text-text-muted">
                 {Match.value(info().state).pipe(
-                  Match.when("confirm", () => ctx.t("remote.confirmAccount", { name: info().name, id: String(info().user) })),
+                  Match.when("confirm", () => info().confirmation ? ctx.t("remote.confirmLink", { name: info().name, code: info().confirmation || "" }) : ctx.t("remote.confirmAccount", { name: info().name, id: String(info().user) })),
                   Match.when("connected", () => ctx.t("remote.connected", { name: info().name })),
+                  Match.when("pairing", () => ctx.t(info().channel === "web" ? "remote.webPairing" : "remote.pairing")),
                   Match.orElse((state) => ctx.t(`remote.${state}`)),
                 )}
               </p>
               <div class="flex flex-wrap gap-2">
                 <Show when={info().url}>
-                  <Button variant="neutral" onClick={() => ctx.system.openExternal(info().url)}>{ctx.t("remote.open")}</Button>
+                  <Button variant="neutral" onClick={() => ctx.system.openExternal(info().url)}>{ctx.t(info().channel === "web" ? "remote.webOpen" : "remote.open")}</Button>
                   <Button variant="neutral" disabled={copyRemote.isPending} onClick={() => copyRemote.mutate(info().url)}>
                     {ctx.t(copyRemote.isSuccess && copyRemote.data === info().url ? "common.copied" : "remote.copyLink")}
                   </Button>

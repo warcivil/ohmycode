@@ -473,6 +473,8 @@ export const Pairing = Ipc.define({
   methods: {
     remoteStatus: { output: RemoteStatus },
     remotePair: {},
+    remotePairWeb: {},
+    remoteConfirmLink: { input: Schema.String },
     remoteConfirm: { input: Schema.Number },
     remoteDisconnect: {},
     /** The local server's advertised URLs. */
@@ -563,6 +565,8 @@ const setup: MainSetup<typeof definition> = async (ctx) => {
   ctx.provide(Pairing, {
     remoteStatus: () => remote.status(),
     remotePair: () => remote.pair(),
+    remotePairWeb: () => remote.pair("web"),
+    remoteConfirmLink: (confirmation) => remote.confirmLink(confirmation),
     remoteConfirm: (user) => remote.confirm(user),
     remoteDisconnect: () => remote.disconnect(),
     info: async () => ({ urls: (await (await client()).server.info()).urls }),

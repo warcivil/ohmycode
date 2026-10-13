@@ -21,7 +21,7 @@ export const Plugin = {
     yield* ctx.tool.transform((editor) => editor.add({
       name: "telegram_send_file",
       options: { codemode: false },
-      description: "Send a local file as an actual Telegram document to the owner of this remotely controlled conversation. Use when the user asks to send a created file or screenshot here/to Telegram. Maximum 50 MB per file. Call once per file; do not claim delivery unless this tool succeeds. Requires an active Telegram task. Remote workspace files must first be downloaded to this computer.",
+      description: "Send a local file to the originating remote chat (website or Telegram). Routing follows this conversation automatically. Use when the user asks to send a created file or screenshot here. Maximum 50 MB per file. Call once per file; do not claim delivery unless this tool succeeds. Requires an active remote task. Remote workspace files must first be downloaded to this computer.",
       input: Schema.Struct({ path: Schema.String.annotate({ description: "Path of the existing local file to send" }) }),
       output: Schema.Struct({ sent: Schema.Boolean }),
       execute: (input, context) => Effect.gen(function* () {
@@ -49,8 +49,8 @@ export const Plugin = {
           if (!response.ok) throw new Error("File delivery failed; check desktop connection and file size")
         })
 
-        return { output: { sent: true }, content: "File delivered to the user's Telegram chat.", metadata: { sent: true } }
-      }).pipe(Effect.mapError((error) => new ToolFailure({ message: "Could not send file to Telegram", error }))),
+        return { output: { sent: true }, content: "File delivered to the originating remote chat.", metadata: { sent: true } }
+      }).pipe(Effect.mapError((error) => new ToolFailure({ message: "Could not send file to the remote chat", error }))),
     })).pipe(Effect.orDie)
   }),
 }

@@ -1,6 +1,13 @@
 import { Schema } from "effect"
 
+export const RemoteLink = Schema.Struct({ channel: Schema.Literals(["web", "telegram"]), owner: Schema.String, name: Schema.String, confirmation: Schema.String })
+
+export const WebAccount = Schema.Struct({ account: Schema.String, name: Schema.String })
+
 export const RemoteState = Schema.Struct({
+  channel: Schema.optional(Schema.Literals(["web", "telegram"])),
+  web: Schema.optional(Schema.NullOr(WebAccount)),
+  pending: Schema.optional(Schema.NullOr(RemoteLink)),
   secret: Schema.String,
   url: Schema.String,
   relay: Schema.String,
@@ -13,6 +20,10 @@ export const RemoteState = Schema.Struct({
 export const emptyRemote = { secret: "", url: "", relay: "", confirmed: false, user: null, name: "", watched: [] }
 
 export const RemoteStatus = Schema.Struct({
+  channel: Schema.optional(Schema.Literals(["web", "telegram"])),
+  webConnected: Schema.optional(Schema.Boolean),
+  telegramConnected: Schema.optional(Schema.Boolean),
+  confirmation: Schema.optional(Schema.String),
   state: Schema.Literals(["off", "pairing", "confirm", "connected", "offline"]),
   url: Schema.String,
   user: Schema.NullOr(Schema.Number),
