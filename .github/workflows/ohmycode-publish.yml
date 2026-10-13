@@ -5,7 +5,7 @@ on:
       run_id:
         description: Successful OhMyCode Windows build run ID
         required: true
-        default: "38179554729"
+        default: "38353427343"
   push:
     branches: [v2]
     paths: [".github/workflows/ohmycode-publish.yml"]
@@ -21,7 +21,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      BUILD_RUN: ${{ inputs.run_id || '38179554729' }}
+      BUILD_RUN: ${{ inputs.run_id || '38353427343' }}
     steps:
       - name: Verify build provenance and download artifact
         run: |
@@ -57,7 +57,7 @@ jobs:
       - name: Publish immutable release assets
         run: |
           set -euo pipefail
-          printf '%s\n' 'OhMyCode update: answer agent questions in Telegram with option buttons, multiple selection, custom text replies and cancellation. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
+          printf '%s\n' 'OhMyCode update: connect your computer to the OhMyLama website and Telegram. Tasks, answers, files and confirmation forms are routed to their originating chat. Windows installer verified by installing and starting its bundled server in CI. Linux download and setup instructions: https://ohmylama.ru/ohmycode' > notes.txt
           tag_sha=$(gh api "repos/$GH_REPO/git/ref/tags/ohmycode-$BUILD_VERSION" --jq '.object.sha')
           test "$tag_sha" = "$BUILD_SHA"
           # The Git tag already identifies the verified build; release creation must not retarget it.
