@@ -17,6 +17,6 @@ core version and authenticated core startup under an isolated temporary profile.
 The interactive GUI, login, model response, terminal and reopening history still
 need testing on a Mac. No real login, pairing or paid model request runs in CI.
 
-A private `macos-result-<run-id>` branch contains `.ci/macos-result.json` with the
+A `macos-result-<run-id>` branch contains `.ci/macos-result.json` with the
 source SHA, workflow outcome and artifact metadata, allowing SSH-only maintainers
 to inspect the result without copying a GitHub API token to their machine.
