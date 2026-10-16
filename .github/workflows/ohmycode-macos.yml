@@ -1,0 +1,93 @@
+name: OhMyCode macOS test builds
+run-name: OhMyCode macOS Intel + Apple Silicon — ${{ github.ref_name }}
+on:
+  workflow_dispatch:
+  push:
+    branches: [macos-builds]
+permissions:
+  contents: read
+concurrency:
+  group: ohmycode-macos-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x64
+          - runner: macos-15
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      OHMYCODE_BUILD_CHANNEL: prod
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.22
+      OPENCODE_CHANNEL: prod
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ./.github/actions/setup-bun
+      - name: Verify runner architecture
+        run: test "$(node -p process.arch)" = '${{ matrix.arch }}'
+      - name: Check desktop packaging contracts
+        working-directory: packages/desktop
+        run: bun test electron-builder.config.test.ts electron-builder.macos-test.test.ts src/main/service src/main/lifecycle
+      - name: Build existing OhMyCode GUI
+        run: |
+          set -o pipefail
+          bun script/package-ohmycode-mac.ts 2>&1 | tee "$RUNNER_TEMP/ohmycode-macos-build.log"
+      - name: Verify packaged core and application
+        run: bun script/smoke-ohmycode-mac.ts
+      - name: Upload test artifacts (no release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ohmycode-macos-${{ matrix.arch }}-test
+          path: |
+            packages/desktop/dist/*-mac-${{ matrix.arch }}.dmg
+            packages/desktop/dist/*-mac-${{ matrix.arch }}.zip
+            packages/desktop/dist/SHA256SUMS-MAC-${{ matrix.arch }}.txt
+            packages/desktop/dist/INSTALL-MAC.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ohmycode-macos-${{ matrix.arch }}-diagnostics
+          path: ${{ runner.temp }}/ohmycode-macos-build.log
+          retention-days: 7
+  report:
+    if: always()
+    needs: installer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Save private build receipt for SSH-only maintainers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.installer.result }}
+        run: |
+          mkdir -p .ci
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" > /tmp/artifacts.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" > /tmp/jobs.json
+          python3 - <<'PY'
+          import json, os
+          result = dict(result=os.environ['RESULT'], source=os.environ['GITHUB_SHA'],
+                        url=f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+                        artifacts=json.load(open('/tmp/artifacts.json'))['artifacts'],
+                        jobs=json.load(open('/tmp/jobs.json'))['jobs'])
+          with open('.ci/macos-result.json', 'w') as f:
+              json.dump(result, f, indent=2)
+          PY
+          git switch -c "macos-result-$GITHUB_RUN_ID"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .ci/macos-result.json
+          git commit -m 'chore(ci): record macOS test build results'
+          git push origin "HEAD:refs/heads/macos-result-$GITHUB_RUN_ID"
