@@ -1,0 +1,357 @@
+{
+  "result": "success",
+  "source": "76204a01b3068654437ff451186331432bc94904",
+  "url": "https://github.com/warcivil/ohmycode/actions/runs/38888136041",
+  "artifacts": [
+    {
+      "id": 12041096753,
+      "node_id": "MDg6QXJ0aWZhY3QxMjA0MTA5Njc1Mw==",
+      "name": "ohmycode-macos-arm64-test",
+      "size_in_bytes": 438194528,
+      "url": "https://api.github.com/repos/warcivil/ohmycode/actions/artifacts/12041096753",
+      "archive_download_url": "https://api.github.com/repos/warcivil/ohmycode/actions/artifacts/12041096753/zip",
+      "expired": false,
+      "digest": "sha256:6219830606b2bb48fe1df3066d80aef48f4f45ee1181dbb3b02c2894fa83c5b2",
+      "created_at": "2026-10-16T10:40:55Z",
+      "updated_at": "2026-10-16T10:40:55Z",
+      "expires_at": "2026-11-15T10:40:40Z",
+      "workflow_run": {
+        "id": 38888136041,
+        "repository_id": 1407108244,
+        "head_repository_id": 1407108244,
+        "head_branch": "macos-builds",
+        "head_sha": "76204a01b3068654437ff451186331432bc94904"
+      }
+    },
+    {
+      "id": 12040564940,
+      "node_id": "MDg6QXJ0aWZhY3QxMjA0MDU2NDk0MA==",
+      "name": "ohmycode-macos-x64-test",
+      "size_in_bytes": 456904021,
+      "url": "https://api.github.com/repos/warcivil/ohmycode/actions/artifacts/12040564940",
+      "archive_download_url": "https://api.github.com/repos/warcivil/ohmycode/actions/artifacts/12040564940/zip",
+      "expired": false,
+      "digest": "sha256:9bf8cbfab522a25985d8f5630742a49386c4d00ceb1a5c25c7addbb4d5ec0b04",
+      "created_at": "2026-10-16T10:48:13Z",
+      "updated_at": "2026-10-16T10:48:13Z",
+      "expires_at": "2026-11-15T10:47:40Z",
+      "workflow_run": {
+        "id": 38888136041,
+        "repository_id": 1407108244,
+        "head_repository_id": 1407108244,
+        "head_branch": "macos-builds",
+        "head_sha": "76204a01b3068654437ff451186331432bc94904"
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "id": 116930810696,
+      "run_id": 38888136041,
+      "workflow_name": "OhMyCode macOS Intel + Apple Silicon \u2014 macos-builds",
+      "head_branch": "macos-builds",
+      "run_url": "https://api.github.com/repos/warcivil/ohmycode/actions/runs/38888136041",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOU97ElM8AAAAbOZ6TSA",
+      "head_sha": "76204a01b3068654437ff451186331432bc94904",
+      "url": "https://api.github.com/repos/warcivil/ohmycode/actions/jobs/116930810696",
+      "html_url": "https://github.com/warcivil/ohmycode/actions/runs/38888136041/job/116930810696",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-16T10:34:35Z",
+      "started_at": "2026-10-16T10:34:41Z",
+      "completed_at": "2026-10-16T10:48:19Z",
+      "name": "installer (macos-15-intel, x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-16T10:34:43Z",
+          "completed_at": "2026-10-16T10:34:44Z"
+        },
+        {
+          "name": "Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-16T10:34:44Z",
+          "completed_at": "2026-10-16T10:35:02Z"
+        },
+        {
+          "name": "Run ./.github/actions/setup-bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-16T10:35:02Z",
+          "completed_at": "2026-10-16T10:39:00Z"
+        },
+        {
+          "name": "Verify runner architecture",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-16T10:39:00Z",
+          "completed_at": "2026-10-16T10:39:01Z"
+        },
+        {
+          "name": "Check desktop packaging contracts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-16T10:39:01Z",
+          "completed_at": "2026-10-16T10:39:04Z"
+        },
+        {
+          "name": "Build existing OhMyCode GUI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-16T10:39:04Z",
+          "completed_at": "2026-10-16T10:47:31Z"
+        },
+        {
+          "name": "Verify packaged core and application",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-16T10:47:31Z",
+          "completed_at": "2026-10-16T10:47:38Z"
+        },
+        {
+          "name": "Upload test artifacts (no release)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-16T10:47:38Z",
+          "completed_at": "2026-10-16T10:48:13Z"
+        },
+        {
+          "name": "Upload build diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2026-10-16T10:48:13Z",
+          "completed_at": "2026-10-16T10:48:13Z"
+        },
+        {
+          "name": "Post Run ./.github/actions/setup-bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-16T10:48:13Z",
+          "completed_at": "2026-10-16T10:48:14Z"
+        },
+        {
+          "name": "Post Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-16T10:48:14Z",
+          "completed_at": "2026-10-16T10:48:15Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-16T10:48:15Z",
+          "completed_at": "2026-10-16T10:48:17Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/warcivil/ohmycode/check-runs/116930810696",
+      "labels": [
+        "macos-15-intel"
+      ],
+      "runner_id": 1000000126,
+      "runner_name": "GitHub Actions 1000000126",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116930810969,
+      "run_id": 38888136041,
+      "workflow_name": "OhMyCode macOS Intel + Apple Silicon \u2014 macos-builds",
+      "head_branch": "macos-builds",
+      "run_url": "https://api.github.com/repos/warcivil/ohmycode/actions/runs/38888136041",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOU97ElM8AAAAbOZ6UWQ",
+      "head_sha": "76204a01b3068654437ff451186331432bc94904",
+      "url": "https://api.github.com/repos/warcivil/ohmycode/actions/jobs/116930810969",
+      "html_url": "https://github.com/warcivil/ohmycode/actions/runs/38888136041/job/116930810969",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-16T10:34:35Z",
+      "started_at": "2026-10-16T10:34:48Z",
+      "completed_at": "2026-10-16T10:41:03Z",
+      "name": "installer (macos-15, arm64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-16T10:34:48Z",
+          "completed_at": "2026-10-16T10:34:49Z"
+        },
+        {
+          "name": "Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-16T10:34:49Z",
+          "completed_at": "2026-10-16T10:34:55Z"
+        },
+        {
+          "name": "Run ./.github/actions/setup-bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-16T10:34:55Z",
+          "completed_at": "2026-10-16T10:36:57Z"
+        },
+        {
+          "name": "Verify runner architecture",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-16T10:36:57Z",
+          "completed_at": "2026-10-16T10:36:58Z"
+        },
+        {
+          "name": "Check desktop packaging contracts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-16T10:36:58Z",
+          "completed_at": "2026-10-16T10:37:00Z"
+        },
+        {
+          "name": "Build existing OhMyCode GUI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-16T10:37:00Z",
+          "completed_at": "2026-10-16T10:40:36Z"
+        },
+        {
+          "name": "Verify packaged core and application",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-16T10:40:36Z",
+          "completed_at": "2026-10-16T10:40:40Z"
+        },
+        {
+          "name": "Upload test artifacts (no release)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-16T10:40:40Z",
+          "completed_at": "2026-10-16T10:40:55Z"
+        },
+        {
+          "name": "Upload build diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2026-10-16T10:40:55Z",
+          "completed_at": "2026-10-16T10:40:55Z"
+        },
+        {
+          "name": "Post Run ./.github/actions/setup-bun",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-16T10:40:55Z",
+          "completed_at": "2026-10-16T10:40:57Z"
+        },
+        {
+          "name": "Post Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-16T10:40:57Z",
+          "completed_at": "2026-10-16T10:40:58Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-16T10:40:58Z",
+          "completed_at": "2026-10-16T10:41:00Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/warcivil/ohmycode/check-runs/116930810969",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000000127,
+      "runner_name": "GitHub Actions 1000000127",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 116935687103,
+      "run_id": 38888136041,
+      "workflow_name": "OhMyCode macOS Intel + Apple Silicon \u2014 macos-builds",
+      "head_branch": "macos-builds",
+      "run_url": "https://api.github.com/repos/warcivil/ohmycode/actions/runs/38888136041",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOU97ElM8AAAAbOej7vw",
+      "head_sha": "76204a01b3068654437ff451186331432bc94904",
+      "url": "https://api.github.com/repos/warcivil/ohmycode/actions/jobs/116935687103",
+      "html_url": "https://github.com/warcivil/ohmycode/actions/runs/38888136041/job/116935687103",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-10-16T10:48:19Z",
+      "started_at": "2026-10-16T10:48:22Z",
+      "completed_at": null,
+      "name": "report",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-16T10:48:22Z",
+          "completed_at": "2026-10-16T10:48:23Z"
+        },
+        {
+          "name": "Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-16T10:48:23Z",
+          "completed_at": "2026-10-16T10:48:26Z"
+        },
+        {
+          "name": "Save private build receipt for SSH-only maintainers",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 3,
+          "started_at": "2026-10-16T10:48:26Z",
+          "completed_at": null
+        },
+        {
+          "name": "Post Run actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+          "status": "pending",
+          "conclusion": null,
+          "number": 6,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/warcivil/ohmycode/check-runs/116935687103",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000000128,
+      "runner_name": "GitHub Actions 1000000128",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}
