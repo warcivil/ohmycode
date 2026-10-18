@@ -55,6 +55,7 @@ export class RemoteControl {
   private online = false
   private running = false
   private readonly permissions = new Set<string>()
+  private readonly permissionSnapshots = new Map<string, string>()
   private readonly forms = new Map<string, string>()
   private readonly phases = new Map<string, string>()
   private readonly activityTimes = new Map<string, number>()
@@ -178,6 +179,7 @@ export class RemoteControl {
     this.connection = new AbortController()
     this.stored.set({ ...emptyRemote })
     this.permissions.clear()
+    this.permissionSnapshots.clear()
     this.forms.clear()
     this.online = false
 
@@ -489,7 +491,8 @@ export class RemoteControl {
 
         if (this.live(state)) this.stored.set({ ...this.stored.value, watched: this.stored.value.watched.filter((row) => row.prompt !== target) })
 
-        return { text: `Задача остановлена: ${session.title}.` }
+        await this.syncPermissions(client, state, session.id)
+        return { text: "Задача остановлена." }
       }
 
       await client.session.interrupt({ sessionID: session.id, resume: false }, options)
@@ -508,7 +511,8 @@ export class RemoteControl {
 
       if (this.live(state)) this.stored.set({ ...this.stored.value, watched: this.stored.value.watched.filter((row) => row.session !== session.id) })
 
-      return { text: `Работа остановлена: ${session.title}.` }
+      await this.syncPermissions(client, state, session.id)
+      return { text: "Работа остановлена." }
     }
 
     if (command.kind === "question") {
@@ -530,7 +534,13 @@ export class RemoteControl {
 
     if (command.kind === "permission") {
       if (!command.request || !command.decision) throw new Error("Invalid permission reply")
+      const pending = await client.permission.list({ sessionID: session.id }, options)
+      if (!pending.some((row) => row.id === command.request)) {
+        await this.syncPermissions(client, state, session.id)
+        return { text: "Запрос разрешения уже закрыт." }
+      }
       await client.permission.reply({ sessionID: session.id, requestID: command.request, decision: command.decision }, options)
+      await this.syncPermissions(client, state, session.id)
 
       return { text: command.decision === "once" ? "Действие разрешено один раз." : command.decision === "always" ? "Действие разрешено: всегда." : "Действие отклонено." }
     }
@@ -544,6 +554,7 @@ export class RemoteControl {
     const pending = await client.permission.list({ sessionID: session.id }, options)
 
     for (const permission of pending) await this.ask(state, session.id, permission, `${command.id}-${permission.id}`)
+    await this.syncPermissions(client, state, session.id)
     await this.questions(client, state, session.id, true)
     const active = await client.session.active(options)
     const transcript = await client.session.export({ sessionID: session.id, sanitize: false }, options)
@@ -551,6 +562,22 @@ export class RemoteControl {
     const text = last?.type === "assistant" ? last.content.filter((item) => item.type === "text").map((item) => item.text).join("\n") : ""
 
     return { text: `${session.title}\n${active[session.id] ? "Работает" : "Ожидает задачу"}\n\n${text}`.slice(0, 23000) }
+  }
+
+  private async syncPermissions(client: OpenCodeClient, state: State, session: string) {
+    const pending = await client.permission.list({ sessionID: session }, { signal: AbortSignal.any([this.controller.signal, this.connection.signal, AbortSignal.timeout(10000)]) })
+    for (const permission of pending) {
+      if (this.permissions.has(permission.id)) continue
+      await this.ask(state, session, permission, permission.id)
+      this.permissions.add(permission.id)
+    }
+    const requests = pending.map((row) => row.id).sort()
+    const fingerprint = JSON.stringify(requests)
+    if (this.permissionSnapshots.get(session) !== fingerprint) {
+      await this.request(state.relay, state.secret, `/device/events/permissions-${session}-${Date.now()}`, { kind: "permissions", session, requests })
+      this.permissionSnapshots.set(session, fingerprint)
+    }
+    return pending
   }
 
   private async ask(state: State, session: string, permission: PermissionListOutput[number], identity: string) {
@@ -615,13 +642,7 @@ export class RemoteControl {
     for (const watched of this.stored.value.watched) {
       if (!this.live(state)) return
       const questions = await this.questions(client, state, watched.session)
-      const pending = await client.permission.list({ sessionID: watched.session }, options)
-
-      for (const permission of pending) {
-        if (this.permissions.has(permission.id)) continue
-        await this.ask(state, watched.session, permission, permission.id)
-        this.permissions.add(permission.id)
-      }
+      const pending = await this.syncPermissions(client, state, watched.session)
 
       const inbox = await client.session.inbox.list({ sessionID: watched.session }, options)
       const queued = inbox.some((row) => row.id === watched.prompt)

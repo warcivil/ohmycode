@@ -397,6 +397,7 @@ describe("remote connector's HTTP boundary", () => {
     const paths: string[] = []
     const decisions: string[] = []
     const results: string[] = []
+    const snapshots: string[][] = []
 
     const server = await serve(async (request) => {
       const path = new URL(request.url).pathname
@@ -407,6 +408,7 @@ describe("remote connector's HTTP boundary", () => {
       if (path.endsWith("/commands")) return Response.json({ commands: [
         { id: "tg-31", kind: "stop", session: "ses_test" },
         { id: "tg-32", kind: "permission", session: "ses_test", request: "per_test", decision },
+        { id: "tg-33", kind: "permission", session: "ses_test", request: "per_other", decision },
       ] })
 
       if (path.includes("/results/")) {
@@ -416,6 +418,13 @@ describe("remote connector's HTTP boundary", () => {
       }
 
       if (path === "/api/session/ses_test") return Response.json({ data: { id: "ses_test", title: "Test" } })
+
+      if (path.includes("/events/permissions-")) {
+        const body = Schema.decodeUnknownSync(Schema.Struct({ requests: Schema.Array(Schema.String) }))(await request.json())
+        snapshots.push([...body.requests])
+        return Response.json({ ok: true })
+      }
+      if (path.endsWith("/permission")) return Response.json({ data: decisions.length ? [] : ["per_test", "per_other"].map((id) => ({ id, sessionID: "ses_test", action: "external_directory", resources: ["/tmp/test/*"], save: ["/tmp/test/*"] })) })
 
       if (path.endsWith("/interrupt")) return Response.json({ interrupted: true })
 
@@ -444,13 +453,15 @@ describe("remote connector's HTTP boundary", () => {
     control.start()
     const deadline = Date.now() + 4000
 
-    while (results.length < 2 && Date.now() < deadline) await Bun.sleep(20)
+    while (results.length < 3 && Date.now() < deadline) await Bun.sleep(20)
     control.close()
-    expect(results).toHaveLength(2)
+    expect(results).toHaveLength(3)
     expect(paths).toContain("POST /api/session/ses_test/interrupt")
     expect(paths).toContain("DELETE /api/session/ses_test/inbox/msg_remote_tg-3")
     expect(paths).not.toContain("DELETE /api/session/ses_test/inbox/msg_local_4")
     expect(decisions).toEqual([JSON.stringify({ decision })])
+    expect(snapshots.at(-1)).toEqual([])
+    expect(snapshots[0]).toEqual(["per_other", "per_test"])
   })
 
   test("status and completed tasks deliver assistant text, not sanitized placeholders", async () => {
