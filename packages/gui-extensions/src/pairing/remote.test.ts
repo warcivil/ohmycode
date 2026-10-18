@@ -393,7 +393,7 @@ describe("remote connector's HTTP boundary", () => {
     await Bun.sleep(100)
   })
 
-  test("stop cancels only Telegram inbox entries and permissions remain one-shot", async () => {
+  test.each(["once", "always", "reject"] as const)("stop cancels only Telegram inbox entries and permission %s is forwarded", async (decision) => {
     const paths: string[] = []
     const decisions: string[] = []
     const results: string[] = []
@@ -406,7 +406,7 @@ describe("remote connector's HTTP boundary", () => {
 
       if (path.endsWith("/commands")) return Response.json({ commands: [
         { id: "tg-31", kind: "stop", session: "ses_test" },
-        { id: "tg-32", kind: "permission", session: "ses_test", request: "per_test", decision: "once" },
+        { id: "tg-32", kind: "permission", session: "ses_test", request: "per_test", decision },
       ] })
 
       if (path.includes("/results/")) {
@@ -450,7 +450,7 @@ describe("remote connector's HTTP boundary", () => {
     expect(paths).toContain("POST /api/session/ses_test/interrupt")
     expect(paths).toContain("DELETE /api/session/ses_test/inbox/msg_remote_tg-3")
     expect(paths).not.toContain("DELETE /api/session/ses_test/inbox/msg_local_4")
-    expect(decisions).toEqual(['{"decision":"once"}'])
+    expect(decisions).toEqual([JSON.stringify({ decision })])
   })
 
   test("status and completed tasks deliver assistant text, not sanitized placeholders", async () => {

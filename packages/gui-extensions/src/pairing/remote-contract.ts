@@ -49,5 +49,5 @@ export const RemoteCommand = Schema.Struct({
   form: Schema.optional(Schema.String.check(Schema.isPattern(/^frm_[a-zA-Z0-9_-]+$/))),
   answer: Schema.optional(Schema.Record(Schema.String, Schema.Union([Schema.String, Schema.Array(Schema.String)]))),
   cancel: Schema.optional(Schema.Boolean),
-  decision: Schema.optional(Schema.Literals(["once", "reject"])),
+  decision: Schema.optional(Schema.Literals(["once", "always", "reject"])),
 })

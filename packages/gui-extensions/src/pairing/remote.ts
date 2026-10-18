@@ -29,6 +29,7 @@ type Storage = {
 type Endpoint = { url: string; headers: Readonly<Record<string, string>>; local: boolean }
 
 type Reply = {
+  allow_always?: boolean
   forms?: { id: string; title: string; fields: Extract<FormInfo["fields"][number], { type: "string" | "multiselect" }>[] }[]
   finished?: boolean
   task?: string
@@ -531,7 +532,7 @@ export class RemoteControl {
       if (!command.request || !command.decision) throw new Error("Invalid permission reply")
       await client.permission.reply({ sessionID: session.id, requestID: command.request, decision: command.decision }, options)
 
-      return { text: command.decision === "once" ? "Действие разрешено один раз." : "Действие отклонено." }
+      return { text: command.decision === "once" ? "Действие разрешено один раз." : command.decision === "always" ? "Действие разрешено: всегда." : "Действие отклонено." }
     }
 
     if (command.kind === "new") {
@@ -554,7 +555,7 @@ export class RemoteControl {
 
   private async ask(state: State, session: string, permission: PermissionListOutput[number], identity: string) {
     await this.request(state.relay, state.secret, `/device/events/${identity}`, {
-      kind: "permission", session, request: permission.id,
+      kind: "permission", session, request: permission.id, allow_always: Boolean(permission.save?.length),
       text: `Требуется разрешение\n${permission.action}\n${permission.resources.join("\n")}\n${permission.message || ""}`.slice(0, 23000),
     })
   }
