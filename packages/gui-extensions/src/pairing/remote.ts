@@ -493,6 +493,7 @@ export class RemoteControl {
         if (this.live(state)) this.stored.set({ ...this.stored.value, watched: this.stored.value.watched.filter((row) => row.prompt !== target) })
 
         await this.syncPermissions(client, state, session.id)
+
         return { text: "Задача остановлена." }
       }
 
@@ -513,6 +514,7 @@ export class RemoteControl {
       if (this.live(state)) this.stored.set({ ...this.stored.value, watched: this.stored.value.watched.filter((row) => row.session !== session.id) })
 
       await this.syncPermissions(client, state, session.id)
+
       return { text: "Работа остановлена." }
     }
 
@@ -536,14 +538,21 @@ export class RemoteControl {
     if (command.kind === "permission") {
       if (!command.request || !command.decision) throw new Error("Invalid permission reply")
       const pending = await client.permission.list({ sessionID: session.id }, options)
+
       if (!pending.some((row) => row.id === command.request)) {
         await this.syncPermissions(client, state, session.id)
+
         return { text: "Запрос разрешения уже закрыт." }
       }
+
       await client.permission.reply({ sessionID: session.id, requestID: command.request, decision: command.decision }, options)
       await this.syncPermissions(client, state, session.id)
 
-      return { text: command.decision === "once" ? "Действие разрешено один раз." : command.decision === "always" ? "Действие разрешено: всегда." : "Действие отклонено." }
+      if (command.decision === "once") return { text: "Действие разрешено один раз." }
+
+      if (command.decision === "always") return { text: "Действие разрешено: всегда." }
+
+      return { text: "Действие отклонено." }
     }
 
     if (command.kind === "new") {
@@ -567,17 +576,21 @@ export class RemoteControl {
 
   private async syncPermissions(client: OpenCodeClient, state: State, session: string) {
     const pending = await client.permission.list({ sessionID: session }, { signal: AbortSignal.any([this.controller.signal, this.connection.signal, AbortSignal.timeout(10000)]) })
+
     for (const permission of pending) {
       if (this.permissions.has(permission.id)) continue
       await this.ask(state, session, permission, permission.id)
       this.permissions.add(permission.id)
     }
+
     const requests = pending.map((row) => row.id).sort()
     const fingerprint = JSON.stringify(requests)
+
     if (this.permissionSnapshots.get(session) !== fingerprint) {
       await this.request(state.relay, state.secret, `/device/events/permissions-${session}-${Date.now()}`, { kind: "permissions", session, requests })
       this.permissionSnapshots.set(session, fingerprint)
     }
+
     return pending
   }
 

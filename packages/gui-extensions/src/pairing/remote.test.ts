@@ -422,8 +422,10 @@ describe("remote connector's HTTP boundary", () => {
       if (path.includes("/events/permissions-")) {
         const body = Schema.decodeUnknownSync(Schema.Struct({ requests: Schema.Array(Schema.String) }))(await request.json())
         snapshots.push([...body.requests])
+
         return Response.json({ ok: true })
       }
+
       if (path.endsWith("/permission")) return Response.json({ data: decisions.length ? [] : ["per_test", "per_other"].map((id) => ({ id, sessionID: "ses_test", action: "external_directory", resources: ["/tmp/test/*"], save: ["/tmp/test/*"] })) })
 
       if (path.endsWith("/interrupt")) return Response.json({ interrupted: true })
