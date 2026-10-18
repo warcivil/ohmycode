@@ -33,7 +33,7 @@ type Reply = {
   forms?: { id: string; title: string; fields: Extract<FormInfo["fields"][number], { type: "string" | "multiselect" }>[] }[]
   finished?: boolean
   task?: string
-  kind?: "text" | "sessions" | "permission" | "selected" | "progress" | "stage" | "models" | "variants" | "question_result" | "questions"
+  kind?: "text" | "sessions" | "permission" | "selected" | "progress" | "stage" | "models" | "variants" | "question_result" | "questions" | "permissions"
   text?: string
   model?: { id: string; providerID: string }
   variants?: string[]
@@ -44,6 +44,7 @@ type Reply = {
   sessions?: { id: string; title: string }[]
   session?: string
   request?: string
+  requests?: string[]
 }
 
 /** Outbound-only connector. No bot token or local server credential leaves this process. */
