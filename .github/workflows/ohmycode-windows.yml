@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       OHMYCODE_BUILD_CHANNEL: prod
-      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.23
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.24
       OPENCODE_CHANNEL: prod
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       NODE_OPTIONS: --max-old-space-size=6144
@@ -104,7 +104,7 @@ jobs:
             packages/desktop/dist/SHA256SUMS-WINDOWS.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "OhMyCode $OHMYCODE_BUILD_VERSION" \
-            --notes 'Remote permission prompts support allow always for project rules. Telegram question recovery is handled by the relay. Windows bundled server startup verified in CI. Website update feed is published separately after Linux verification.'
+            --notes 'Remote permissions synchronize after allow always and stop. Closed permission requests are handled without errors. Windows bundled server startup verified in CI. Website update feed is published separately after Linux verification.'
       - name: Upload diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
