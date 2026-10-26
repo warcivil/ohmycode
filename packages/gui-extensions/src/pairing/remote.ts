@@ -522,7 +522,7 @@ export class RemoteControl {
 
       if (form.state.status !== "pending") return { kind: "question_result", request: form.id, finished: true, text: "Этот вопрос уже закрыт." }
 
-      if (form.metadata?.kind !== "question") throw new Error("Not a question form")
+      if (form.metadata?.kind !== "question" && form.metadata?.kind !== "websearch.provider") throw new Error("Unsupported remote form")
       const input = { sessionID: session.id, formID: form.id }
 
       const result = await (command.cancel
@@ -592,7 +592,7 @@ export class RemoteControl {
     const options = { signal: AbortSignal.any([this.controller.signal, this.connection.signal, AbortSignal.timeout(10000)]) }
     const pending = await client.session.form.list({ sessionID: session }, options)
 
-    const forms = pending.filter((form) => form.metadata?.kind === "question").flatMap((form) => {
+    const forms = pending.filter((form) => form.metadata?.kind === "question" || form.metadata?.kind === "websearch.provider").flatMap((form) => {
       const fields = form.fields.filter((field): field is Extract<FormInfo["fields"][number], { type: "string" | "multiselect" }> => field.type === "string" || field.type === "multiselect")
 
       if (fields.length !== form.fields.length || !fields.length) return []

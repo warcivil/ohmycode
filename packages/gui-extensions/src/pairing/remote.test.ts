@@ -636,19 +636,25 @@ async function serve(handler: (request: Request) => Promise<Response>) {
   }
 }
 
-test.each([false, true])("question form crosses the relay boundary and resumes/cancels (%s)", async (cancel) => {
+test.each([
+  { kind: "question", key: "q0", value: "PDF" },
+  { kind: "websearch.provider", key: "choice", value: "allow" },
+  { kind: "websearch.provider", key: "choice", value: "choose" },
+  { kind: "websearch.provider", key: "choice", value: "disable" },
+  { kind: "websearch.provider", key: "provider", value: "exa" },
+].flatMap((form) => [false, true].map((cancel) => ({ ...form, cancel }))))("remote form crosses the relay boundary and resumes/cancels (%j)", async ({ kind, key, value, cancel }) => {
   let announced = false
   let answered = false
   let accepted = false
   const replies: string[] = []
-  const form = { id: "frm_test", sessionID: "ses_test", title: "Questions", metadata: { kind: "question" }, fields: [{ key: "q0", type: "string", title: "Format", description: "Choose", custom: true, options: [{ label: "PDF", value: "PDF" }] }] }
+  const form = { id: "frm_test", sessionID: "ses_test", title: "Questions", metadata: { kind }, fields: [{ key, type: "string", title: "Format", description: "Choose", custom: true, options: [{ label: value, value }] }] }
 
   const server = await serve(async (request) => {
     const path = new URL(request.url).pathname
 
     if (path.endsWith("/device")) return Response.json({ confirmed: true, telegram_id: 10, telegram_name: "owner" })
 
-    if (path.endsWith("/commands")) return Response.json({ commands: announced && !accepted ? [{ id: "tg-900", kind: "question", session: "ses_test", form: "frm_test", answer: { q0: "PDF" }, cancel }] : [] })
+    if (path.endsWith("/commands")) return Response.json({ commands: announced && !accepted ? [{ id: "tg-900", kind: "question", session: "ses_test", form: "frm_test", answer: { [key]: value }, cancel }] : [] })
 
     if (path.includes("/device/events/questions-")) {
       const body = Schema.decodeUnknownSync(Schema.Struct({ forms: Schema.Array(Schema.Struct({ id: Schema.String })) }))(await request.json())
@@ -677,7 +683,7 @@ test.each([false, true])("question form crosses the relay boundary and resumes/c
     }
 
     if (path.endsWith("/form/frm_test/reply") || (path.endsWith("/form/frm_test") && request.method === "DELETE")) {
-      if (!cancel) expect(await request.json()).toEqual({ answer: { q0: "PDF" } })
+      if (!cancel) expect(await request.json()).toEqual({ answer: { [key]: value } })
       answered = true
 
       return new Response(null, { status: 204 })
