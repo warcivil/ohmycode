@@ -81,8 +81,9 @@ export const dict = {
 
   "command.project.open": "Open project",
   "command.project.copyID": "Copy Project ID",
+  "provider.connect.lama.description": "Continue in your browser to sign in or create an OhMyLama account, then return here.",
   "command.provider.connect": "Sign in to ohmylama",
-  "command.provider.connect.description": "Sign in to OpenCode Go, OpenCode Console, or another model provider",
+  "command.provider.connect.description": "Open the OhMyLama sign-in window to sign in or create an account",
   "command.settings.open": "Open settings",
   "command.session.location.cycle": "Cycle session location",
 

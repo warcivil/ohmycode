@@ -144,7 +144,9 @@ export const dict = {
   "theme.scheme.dark": "Тёмная",
 
   "command.project.open": "Открыть проект",
+  "provider.connect.lama.description": "Нажмите кнопку ниже, чтобы войти или зарегистрироваться на сайте OhMyLama. После подтверждения вернитесь в приложение.",
   "command.provider.connect": "Войти в ohmylama",
+  "command.provider.connect.description": "Открыть окно OhMyLama для входа или регистрации",
   "command.settings.open": "Открыть настройки",
 
   "command.palette": "Палитра команд",

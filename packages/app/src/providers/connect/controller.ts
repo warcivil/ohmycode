@@ -53,6 +53,8 @@ export function createProviderConnectionController(options: {
   keyProvider?: () => string
   directory: () => string | undefined
   onComplete: () => void
+  /** Set false to wait for an explicit sign-in button click. */
+  autoStart?: boolean
   /** Picks the method to start without asking when the integration exposes several. */
   autoSelect?: (methods: ProviderConnectMethod[]) => number | undefined
   /** Runs after the catalogs refresh; returning false keeps the dialog on a retryable error. */
@@ -137,7 +139,7 @@ export function createProviderConnectionController(options: {
   )
 
   const autoIndex = createMemo(() => {
-    if (integration.loading) return undefined
+    if (integration.loading || options.autoStart === false) return undefined
     const values = methods()
 
     if (values.length === 1) return 0

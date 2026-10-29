@@ -60,8 +60,8 @@ type IntegrationForm = NonNullable<ProviderConnectMethod["form"]>[number]
 
 type StringForm = Extract<IntegrationForm, { type: "string" }>
 
-export function useProviderConnectController() {
-  const [store, setStore] = createStore({ selected: undefined as string | undefined })
+export function useProviderConnectController(initialProvider?: string) {
+  const [store, setStore] = createStore({ selected: initialProvider })
   const reset = () => setStore("selected", undefined)
 
   return {
@@ -73,6 +73,7 @@ export function useProviderConnectController() {
 
 export const DialogConnectProvider: Component<{
   directory?: string
+  initialProvider?: string
   /** Connects at the server's default Location instead of the current route's directory. */
   defaultLocation?: boolean
   controller?: ReturnType<typeof useProviderConnectController>
@@ -80,7 +81,7 @@ export const DialogConnectProvider: Component<{
   onDone?: () => void
   onConnected?: (provider: string) => void
 }> = (props) => {
-  const fallback = useProviderConnectController()
+  const fallback = useProviderConnectController(props.initialProvider)
   const controller = props.controller ?? fallback
 
   const [state, setState] = createStore({
@@ -436,6 +437,7 @@ function ProviderConnection(props: {
     // A Go service-account key still belongs to the `opencode-go` integration (zen/go/v1),
     // exactly as before; only the sign-in is shared with the Console.
     keyProvider: () => props.provider,
+    autoStart: props.provider !== "ohmylama",
     directory,
     autoSelect: (methods) => {
       if (!isConsole) return undefined
@@ -814,7 +816,9 @@ function ProviderConnection(props: {
     return (
       <div class="flex flex-col gap-2">
         <div class="px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
-          {language.t("provider.connect.selectMethod", { provider: provider().name })}
+          {props.provider === "ohmylama"
+            ? language.t("provider.connect.lama.description")
+            : language.t("provider.connect.selectMethod", { provider: provider().name })}
         </div>
         <div class="flex flex-col">
           <For each={controller.methods()}>

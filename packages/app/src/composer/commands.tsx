@@ -27,10 +27,10 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
   const agentCommand = withCategory(language.t("command.category.agent"))
   const providerCommand = withCategory(language.t("command.category.provider"))
 
-  // Mirrors the TUI's `/connect`, which the Console's setup steps tell people to run.
+  // Open the LAMA sign-in dialog even when the account is already connected.
   const connectProvider = async () => {
     const { DialogConnectProvider } = await import("@/providers/connect/dialog")
-    void dialog.show(() => <DialogConnectProvider directory={workspace().directory} />)
+    void dialog.show(() => <DialogConnectProvider directory={workspace().directory} initialProvider="ohmylama" />)
   }
 
   const chooseModel = async () => {
