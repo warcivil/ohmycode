@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
+import { useLamaAccount } from "./lama-account"
 import { lamaPrice, useLamaCatalog } from "./lama-catalog"
 
 export function LamaStatusDot(props: { model: string; provider?: string }) {
@@ -41,7 +42,11 @@ export function LamaStatusDot(props: { model: string; provider?: string }) {
 export function LamaPrices(props: { model: string; provider?: string; detailed?: boolean }) {
   const catalog = useLamaCatalog()
   const language = useLanguage()
-  const prices = () => lamaPrice(catalog?.prices(), props.model)
+  const account = useLamaAccount(() => props.provider === "ohmylama")
+  const prices = () => {
+    const data = account.data
+    return (!account.isError && data?.status === "ready" ? data.desktop_prices?.[props.model] : undefined) ?? lamaPrice(catalog?.prices(), props.model)
+  }
 
   const usd = (value: number) =>
     new Intl.NumberFormat(language.intl(), { style: "currency", currency: "USD", maximumFractionDigits: 4 }).format(

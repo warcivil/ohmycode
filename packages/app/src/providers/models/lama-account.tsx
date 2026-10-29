@@ -8,24 +8,24 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { useServerSDK } from "@/runtime/server/client"
 import { usePlatform } from "@/runtime/platform/platform"
 
-export function LamaAccountControl(props: { provider?: string }) {
+export function useLamaAccount(enabled: () => boolean) {
   const sdk = useServerSDK()
-  const language = useLanguage()
-  const platform = usePlatform()
-
-  const account = useQuery(() => ({
+  return useQuery(() => ({
     queryKey: ["lama", "account", sdk.url],
     queryFn: async ({ signal }) => {
       const result = await sdk.api.rpc.call({ rpcID: LamaAccountRpc.id, method: "get", input: {} }, { signal })
-
       return Schema.decodeUnknownSync(LamaAccount)(result.output)
     },
-    enabled: props.provider === "ohmylama",
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
-    retry: 1,
+    enabled: enabled(), staleTime: 15_000, refetchInterval: 30_000, refetchOnWindowFocus: true, retry: 1,
   }))
+}
+
+export function LamaAccountControl(props: { provider?: string }) {
+  const language = useLanguage()
+  const platform = usePlatform()
+
+  const account = useLamaAccount(() => props.provider === "ohmylama")
+
 
   const label = () => {
     if (account.isPending) return language.t("lama.account.loading")

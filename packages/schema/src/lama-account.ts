@@ -2,7 +2,7 @@ import { Schema } from "effect"
 import { Rpc } from "./rpc.js"
 
 export const LamaAccount = Schema.Union([
-  Schema.Struct({ status: Schema.Literal("ready"), balance: Schema.Finite, currency: Schema.Literal("RUB") }),
+  Schema.Struct({ status: Schema.Literal("ready"), balance: Schema.Finite, currency: Schema.Literal("RUB"), desktop_prices: Schema.optional(Schema.Record(Schema.String, Schema.Array(Schema.Finite))) }),
   Schema.Struct({ status: Schema.Literals(["disconnected", "invalid-key", "blocked", "unavailable"]) }),
 ])
 
