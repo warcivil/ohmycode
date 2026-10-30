@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       OHMYCODE_BUILD_CHANNEL: prod
-      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.27
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.28
       OPENCODE_CHANNEL: prod
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       NODE_OPTIONS: --max-old-space-size=6144
@@ -42,7 +42,7 @@ jobs:
         run: bun test electron-builder.config.test.ts src/main/service src/main/lifecycle
       - name: Check device-bound pricing proof
         working-directory: packages/core
-        run: bun test test/provider/lama-device.test.ts
+        run: bun test test/provider/lama-device.test.ts test/provider/lama-login-error.test.ts
       - name: Build Windows prod installer
         run: |
           bun run package:ohmycode:win 2>&1 | Tee-Object "$env:RUNNER_TEMP/ohmycode-build.log"
