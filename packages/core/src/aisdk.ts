@@ -159,7 +159,12 @@ function prepareOptions(model: RuntimeInfo, pkg: string) {
       }
     }
 
-    const send: Fetch = typeof customFetch === "function" ? customFetch : fetch
+    const transport: Fetch = typeof customFetch === "function" ? customFetch : fetch
+    const send: Fetch = async (target, options) => {
+      if (!String(target instanceof Request ? target.url : target).startsWith("https://ohmylama.ru/v1/")) return transport(target, options)
+      const { signDeviceRequest } = await import("./plugin/provider/lama-device.js")
+      return transport(await signDeviceRequest(target instanceof Request ? new Request(target, options) : new Request(String(target), options)), { timeout: false })
+    }
     const middleware = httpMiddleware.getStore()
     const res = await (
       middleware

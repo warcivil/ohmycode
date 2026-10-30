@@ -10,6 +10,7 @@ import { Model } from "../../model.js"
 import { Provider } from "../../provider.js"
 import { Money } from "@opencode/schema/money"
 import catalog from "./lama-catalog.js"
+import { bindDeviceKey, deviceFetch, devicePublicKey } from "./lama-device.js"
 import { createLamaDiscovery, type LamaCatalog } from "./lama-discovery.js"
 
 const providerID = Provider.ID.make("ohmylama")
@@ -23,7 +24,7 @@ const Device = Schema.Struct({
   user_code: Schema.String.check(Schema.isPattern(/^[A-F0-9]{6}$/)),
   expires_in: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(600)),
 })
-const Token = Schema.Struct({ api_key: Schema.String.check(Schema.isPattern(/^sk-lama-[a-zA-Z0-9]+$/)) })
+const Token = Schema.Struct({ api_key: Schema.String.check(Schema.isPattern(/^sk-lama-[a-zA-Z0-9]+$/)), device_bound: Schema.optional(Schema.Boolean) })
 
 export function lamaModels(remote?: LamaCatalog): Model.Info[] {
   if (remote)
@@ -134,7 +135,7 @@ export const LamaPlugin = define({
               saved?.type === "key" ? saved.key : saved?.type === "oauth" ? saved.access : process.env.LAMA_API_KEY
             if (!key) return { status: "disconnected" as const }
             const response = yield* Effect.tryPromise(() =>
-              fetch(`${root}/v1/account`, {
+              deviceFetch(`${root}/v1/account`, {
                 headers: { Authorization: `Bearer ${key}` },
                 signal: AbortSignal.timeout(10_000),
               }),
@@ -148,6 +149,7 @@ export const LamaPlugin = define({
                   Schema.Struct({
                     balance: Schema.NumberFromString,
                     currency: Schema.Literal("RUB"),
+                    desktop_prices: Schema.optional(Schema.Record(Schema.String, Schema.Array(Schema.Finite))),
                   }),
                 ),
               ),
@@ -170,7 +172,7 @@ export const LamaPlugin = define({
         authorize: () =>
           Effect.gen(function* () {
             const response = yield* Effect.tryPromise(() =>
-              fetch(`${root}/api/desktop-auth/start`, { method: "POST", signal: AbortSignal.timeout(15000) }),
+              devicePublicKey().then((public_key) => fetch(`${root}/api/desktop-auth/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ public_key }), signal: AbortSignal.timeout(15000) })),
             )
             if (!response.ok) return yield* Effect.fail(new Error(`LAMA login: HTTP ${response.status}`))
             const device = yield* Effect.tryPromise(() => response.json()).pipe(
@@ -198,6 +200,7 @@ export const LamaPlugin = define({
                   const token = yield* Effect.tryPromise(() => response.json()).pipe(
                     Effect.flatMap(Schema.decodeUnknownEffect(Token)),
                   )
+                  if (token.device_bound) yield* Effect.tryPromise(() => bindDeviceKey(token.api_key))
                   return Credential.OAuth.make({
                     type: "oauth",
                     methodID,
