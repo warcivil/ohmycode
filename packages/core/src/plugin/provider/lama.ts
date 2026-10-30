@@ -11,6 +11,7 @@ import { Provider } from "../../provider.js"
 import { Money } from "@opencode/schema/money"
 import catalog from "./lama-catalog.js"
 import { bindDeviceKey, deviceFetch, devicePublicKey } from "./lama-device.js"
+import { lamaLoginError } from "./lama-login-error.js"
 import { createLamaDiscovery, type LamaCatalog } from "./lama-discovery.js"
 
 const providerID = Provider.ID.make("ohmylama")
@@ -174,7 +175,7 @@ export const LamaPlugin = define({
             const response = yield* Effect.tryPromise(() =>
               devicePublicKey().then((public_key) => fetch(`${root}/api/desktop-auth/start`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ public_key }), signal: AbortSignal.timeout(15000) })),
             )
-            if (!response.ok) return yield* Effect.fail(new Error(`LAMA login: HTTP ${response.status}`))
+            if (!response.ok) return yield* Effect.fail(yield* Effect.promise(() => lamaLoginError(response)))
             const device = yield* Effect.tryPromise(() => response.json()).pipe(
               Effect.flatMap(Schema.decodeUnknownEffect(Device)),
             )
@@ -196,7 +197,7 @@ export const LamaPlugin = define({
                     }),
                   )
                   if (response.status === 202) continue
-                  if (!response.ok) return yield* Effect.fail(new Error(`LAMA login: HTTP ${response.status}`))
+                  if (!response.ok) return yield* Effect.fail(yield* Effect.promise(() => lamaLoginError(response)))
                   const token = yield* Effect.tryPromise(() => response.json()).pipe(
                     Effect.flatMap(Schema.decodeUnknownEffect(Token)),
                   )
