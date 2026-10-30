@@ -32,6 +32,7 @@ import { SessionQueuePanel } from "./queue-panel"
 import { resolveSessionComposerSelection } from "./selection"
 import { createSessionRequestModel } from "../requests/model"
 import type { Region } from "@/runtime/extension/panels"
+import { ContextFooter } from "../context-footer"
 import { SessionLocationMissing } from "./location-missing"
 
 export function createActiveSessionRegion(input: {
@@ -318,6 +319,10 @@ export function ActiveSessionComposerRegion(props: {
                   borderUnderlay
                   readOnly={props.model.queue.undoing()}
                   suggestionBoundary={props.suggestionBoundary}
+                />
+                <ContextFooter
+                  sessionID={props.session.identity.sessionID()!}
+                  model={props.model.composer.model.selection.current()}
                 />
               </div>
             </div>

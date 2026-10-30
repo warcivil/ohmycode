@@ -209,10 +209,10 @@ export const layer = Layer.effect(
       const context = trigger.context
 
       // Only the user compacts when automatic compaction is off, overflow included.
-      if (trigger.reason !== "manual" && !settings.auto) return { status: "skipped" }
+      if (trigger.reason !== "manual" && !(context.session.compaction?.auto ?? settings.auto))
+        return { status: "skipped" }
       const safeCeiling = calculateCeiling(context.model.limit, settings.buffer)
-      const autoCeiling =
-        context.model.ref.providerID === "ohmylama" ? Math.min(LAMA_AUTO_THRESHOLD, safeCeiling) : safeCeiling
+      const autoCeiling = automaticCeiling(context.model, context.session.compaction?.threshold, safeCeiling)
       if (trigger.reason === "auto" && !due(context, autoCeiling)) return { status: "skipped" }
       const native = context.model.compaction?.type === "native"
       const agent = native ? undefined : yield* agents.get(Agent.ID.make("compaction"))
@@ -964,4 +964,15 @@ const estimateMedia = (mime: string) => {
   if (type.startsWith("image/")) return IMAGE_TOKEN_ESTIMATE
   if (type === "application/pdf") return PDF_TOKEN_ESTIMATE
   return 0
+}
+
+/** Session percentages replace the provider default, never the safety reserve. */
+const automaticCeiling = (
+  model: Pick<SessionContext.Loaded["model"], "ref" | "limit">,
+  threshold: number | undefined,
+  safeCeiling: number,
+) => {
+  const window = model.limit.input || model.limit.context
+  if (threshold !== undefined && window > 0) return Math.min(Math.floor((window * threshold) / 100), safeCeiling)
+  return model.ref.providerID === "ohmylama" ? Math.min(LAMA_AUTO_THRESHOLD, safeCeiling) : safeCeiling
 }

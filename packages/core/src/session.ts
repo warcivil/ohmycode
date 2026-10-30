@@ -178,6 +178,10 @@ export interface Interface {
     sessionID: SessionSchema.ID
     metadata: SessionSchema.Metadata
   }) => Effect.Effect<void, NotFoundError>
+  readonly setCompaction: (input: {
+    sessionID: SessionSchema.ID
+    compaction: SessionSchema.CompactionSettings
+  }) => Effect.Effect<void, NotFoundError>
   readonly setPermissions: (input: {
     sessionID: SessionSchema.ID
     permissions: Permission.Ruleset
@@ -285,6 +289,7 @@ const layer = Layer.effect(
               // Children inherit metadata and permissions the way they inherit
               // location, so host policies that read them treat the family uniformly.
               metadata: input.metadata ?? parent?.metadata,
+              compaction: parent?.compaction,
               permissions: input.permissions ?? parent?.permissions,
               model: input.model
                 ? {
@@ -434,6 +439,7 @@ const layer = Layer.effect(
       switchModel: (input) => sessions.forSession(input.sessionID).switchModel(input),
       rename: (input) => sessions.forSession(input.sessionID).rename(input),
       setMetadata: (input) => sessions.forSession(input.sessionID).setMetadata(input),
+      setCompaction: (input) => sessions.forSession(input.sessionID).setCompaction(input),
       setPermissions: (input) => sessions.forSession(input.sessionID).setPermissions(input),
       move: moves.move,
       compact: (input) => sessions.forSession(input.sessionID).compact(input),

@@ -8,6 +8,7 @@ import { Project } from "./project.js"
 import { DateTimeUtcFromMillis, optional, RelativePath } from "./schema.js"
 import { SessionEvent } from "./session-event.js"
 import { SessionID } from "./session-id.js"
+import { CompactionSettings } from "./session-compaction-settings.js"
 import { SessionMetadata } from "./session-metadata.js"
 import { Money } from "./money.js"
 import { Permission } from "./permission.js"
@@ -23,7 +24,7 @@ export type Metadata = SessionMetadata
 
 export const Event = SessionEvent
 
-export { Revert }
+export { Revert, CompactionSettings }
 export const ForkBoundary = SessionFork.Boundary
 export type ForkBoundary = SessionFork.Boundary
 
@@ -53,6 +54,7 @@ export const Info = Schema.Struct({
   location: Location.Ref,
   subpath: RelativePath.pipe(optional),
   metadata: Metadata.pipe(optional),
+  compaction: CompactionSettings.pipe(optional),
   /** Evaluated after the agent's rules; the last matching rule wins. */
   permissions: Permission.Ruleset.pipe(optional),
   revert: Revert.pipe(optional),

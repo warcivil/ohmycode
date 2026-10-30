@@ -8,6 +8,7 @@ import { Content } from "./tool.js"
 import { Model } from "./model.js"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema.js"
 import { SessionID } from "./session-id.js"
+import { CompactionSettings } from "./session-compaction-settings.js"
 import { SessionMetadata } from "./session-metadata.js"
 import { Location } from "./location.js"
 import { SessionMessage } from "./session-message.js"
@@ -60,6 +61,7 @@ export const Created = Event.durable({
     model: Model.Ref.pipe(optional),
     /** Host-supplied annotations resolved at creation, including any inherited from a parent. */
     metadata: SessionMetadata.pipe(optional),
+    compaction: CompactionSettings.pipe(optional),
     permissions: Permission.Ruleset.pipe(optional),
     version: Schema.String,
   },
@@ -117,6 +119,13 @@ export const MetadataUpdated = Event.durable({
   },
 })
 export type MetadataUpdated = typeof MetadataUpdated.Type
+
+export const CompactionConfigured = Event.durable({
+  type: "session.compaction.configured",
+  ...options,
+  schema: { ...Base, compaction: CompactionSettings },
+})
+export type CompactionConfigured = typeof CompactionConfigured.Type
 
 export const Permissions = Event.durable({
   type: "session.permissions",
@@ -656,6 +665,7 @@ export const Definitions = Event.inventory(
   Moved,
   Renamed,
   MetadataUpdated,
+  CompactionConfigured,
   Permissions,
   Viewed,
   UsageUpdated,

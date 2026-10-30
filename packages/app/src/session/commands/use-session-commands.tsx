@@ -288,6 +288,23 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       onSelect: redo,
     }),
     sessionCommand({
+      id: "session.context",
+      title: language.t("context.settings"),
+      description: language.t("context.commandDescription"),
+      slash: "context",
+      disabled: !actions.session.identity.params.id,
+      onSelect: () => {
+        const sessionID = actions.session.identity.params.id
+        if (!sessionID) return
+        return openDialog(
+          () => import("../context-dialog"),
+          ({ ContextDialog }) => {
+            dialog.show(() => <ContextDialog sessionID={sessionID} />)
+          },
+        )
+      },
+    }),
+    sessionCommand({
       id: "session.compact",
       title: language.t("command.session.compact"),
       description: language.t("command.session.compact.description"),

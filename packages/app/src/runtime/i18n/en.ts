@@ -1,6 +1,26 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "context.settings": "Context settings",
+  "context.description":
+    "Saved for this chat. Changes apply to subsequent model steps. Use /compact to compress manually.",
+  "context.auto": "Automatic compaction",
+  "context.default": "Use default",
+  "context.on": "On",
+  "context.off": "Off",
+  "context.threshold": "Compact at (% of the model input window)",
+  "context.reserveHint":
+    "Choose 1–99%, or leave blank for the default. The actual threshold may be lower to reserve room for the answer and tools. It adjusts when you change models.",
+  "context.disabledHint":
+    "History will not be compressed automatically, even after a context-limit error. Use /compact or start a new chat if the model runs out of room.",
+  "context.usage": "Context: ≈{{used}} / {{limit}} · {{percent}}%",
+  "context.unknown": "Context: awaiting usage",
+  "context.tooltip":
+    "Approximate window usage at the last model response, including cached tokens. Draft text and later tool results are not included. Click to configure compaction.",
+  "context.autoOff": "Auto compaction off",
+  "context.custom": "Compact at {{percent}}%",
+  "context.commandDescription": "Set the automatic compaction threshold for this chat",
+
   "lama.account.logout": "Sign out of account",
   "lama.error.balance.title": "Not enough API balance",
   "lama.error.balance.description":
@@ -81,7 +101,8 @@ export const dict = {
 
   "command.project.open": "Open project",
   "command.project.copyID": "Copy Project ID",
-  "provider.connect.lama.description": "Continue in your browser to sign in or create an OhMyLama account, then return here.",
+  "provider.connect.lama.description":
+    "Continue in your browser to sign in or create an OhMyLama account, then return here.",
   "command.provider.connect": "Sign in to ohmylama",
   "command.provider.connect.description": "Open the OhMyLama sign-in window to sign in or create an account",
   "command.settings.open": "Open settings",

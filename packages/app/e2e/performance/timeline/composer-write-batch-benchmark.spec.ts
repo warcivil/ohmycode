@@ -63,6 +63,7 @@ for (const scenario of ["typing", "cursor-movement", "cursor-noop", "submit-clea
     })
     await page.addInitScript(
       ({ key, value, counts }) => {
+        localStorage.setItem("opencode.global.dat:language", JSON.stringify({ locale: "en" }))
         localStorage.setItem(key, JSON.stringify(value))
 
         const probe: Probe = { active: false, encodes: 0, bytes: 0, inputs: 0, keyups: 0 }
