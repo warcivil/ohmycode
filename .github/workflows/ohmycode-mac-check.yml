@@ -1,0 +1,62 @@
+name: OhMyCode macOS build check (no publish)
+on:
+  push:
+    branches: [context-review]
+    paths: [".github/workflows/ohmycode-mac-check.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: macos-26
+            arch: arm64
+          - host: macos-26-intel
+            arch: x64
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 45
+    env:
+      OHMYCODE_BUILD_CHANNEL: prod
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.31
+      OPENCODE_CHANNEL: prod
+      OPENCODE_VERSION: 2.0.24-ohmycode.31
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ./.github/actions/setup-bun
+      - name: Build desktop and native CLI
+        run: bun run build:ohmycode
+      - name: Package test installers with ad-hoc signing
+        working-directory: packages/desktop
+        run: bun run package:mac -- --${{ matrix.arch }} --publish never -c.mac.identity=- -c.mac.notarize=false
+      - name: Verify bundled CLI and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find packages/desktop/dist -maxdepth 2 -name '*.app' -type d | head -1)
+          test -n "$app"
+          cli="$app/Contents/Resources/opencode-cli"
+          test "$("$cli" --version)" = "opencode v$OPENCODE_VERSION"
+          codesign --verify --deep --strict "$app"
+          file "$cli"
+          python3 - <<'PY'
+          import pathlib,hashlib
+          root=pathlib.Path('packages/desktop/dist')
+          files=sorted(p for p in root.iterdir() if p.suffix in ('.dmg','.zip'))
+          assert len(files)==2
+          (root/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in files))
+          PY
+      - name: Save test packages only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ohmycode-macos-test-${{ matrix.arch }}
+          path: |
+            packages/desktop/dist/*.dmg
+            packages/desktop/dist/*.zip
+            packages/desktop/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
