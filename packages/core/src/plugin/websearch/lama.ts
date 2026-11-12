@@ -4,6 +4,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Duration, Effect, Schema, Scope } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { signLamaHttp } from "../provider/lama-http.js"
+import { SearchInput } from "@opencode/schema/websearch"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
 
@@ -11,18 +12,14 @@ export class LoginRequired extends Schema.TaggedError<LoginRequired>()("OhMyLama
 
 export const endpoint = "https://ohmylama.ru/v1/web/search"
 
-const SearchRequest = Schema.Struct({
-  query: Schema.String,
-  mode: Schema.Literal("realtime"),
-  max_results: Schema.Number,
-  snippet_max_length: Schema.Number,
-})
 const SearchResponse = Schema.Struct({
   results: Schema.Array(
     Schema.Struct({
       title: Schema.String,
       url: Schema.String,
       snippet: Schema.String,
+      published_at: Schema.optional(Schema.String),
+      acquired_at: Schema.optional(Schema.String),
     }),
   ),
 })
@@ -45,11 +42,11 @@ export const Plugin = define<HttpClient.HttpClient | Credential.Service | Scope.
             const request = yield* HttpClientRequest.post(endpoint).pipe(
               HttpClientRequest.acceptJson,
               HttpClientRequest.setHeader("Authorization", `Bearer ${key}`),
-              HttpClientRequest.schemaBodyJson(SearchRequest)({
-                query: input.query,
-                mode: "realtime",
-                max_results: 8,
-                snippet_max_length: 1800,
+              HttpClientRequest.schemaBodyJson(SearchInput)({
+                ...input,
+                mode: input.mode ?? "pro",
+                max_results: input.max_results ?? 8,
+                snippet_max_length: input.snippet_max_length ?? 3500,
               }),
             )
             const signed = yield* signLamaHttp(request)
@@ -68,7 +65,10 @@ export const Plugin = define<HttpClient.HttpClient | Credential.Service | Scope.
               url: item.url,
               title: item.title,
               content: item.snippet,
-              time: {},
+              time:
+                item.published_at && Number.isFinite(Date.parse(item.published_at))
+                  ? { published: Date.parse(item.published_at) }
+                  : {},
             }))
           }),
       })

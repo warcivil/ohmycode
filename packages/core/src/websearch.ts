@@ -175,6 +175,7 @@ const layer = Layer.effect(
         yield* kv.set(ProviderKey, selection)
       }),
       query: Effect.fn("WebSearch.query")(function* (input, options) {
+        const { providerID, ...providerInput } = input
         const choice = input.providerID ? undefined : yield* selection()
         let provider = input.providerID
           ? yield* requireProvider(state.get().providers, input.providerID)
@@ -192,9 +193,7 @@ const layer = Layer.effect(
           let cooldown = choice === "random" ? cooldowns.get(provider.id) : undefined
           if (!cooldown || cooldown.until <= (yield* Clock.currentTimeMillis)) {
             attempted.add(provider.id)
-            const result = yield* provider
-              .execute({ query: input.query })
-              .pipe(Effect.flatMap(decodeResults), Effect.result)
+            const result = yield* provider.execute(providerInput).pipe(Effect.flatMap(decodeResults), Effect.result)
             if (result._tag === "Success") return new Response({ providerID: provider.id, results: result.success })
             const cause = result.failure
             const error = new RequestError({ providerID: provider.id, cause })

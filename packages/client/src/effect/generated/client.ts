@@ -1554,7 +1554,19 @@ const EndpointWebsearchQuery = (raw: RawClient["server.websearch"]) => (input: W
   preserveEffect<WebsearchQueryOutput>()(
     raw["websearch.query"]({
       query: { location: input["location"] },
-      payload: { query: input["query"], providerID: input["providerID"] },
+      payload: {
+        query: input["query"],
+        mode: input["mode"],
+        max_results: input["max_results"],
+        snippet_max_length: input["snippet_max_length"],
+        site: input["site"],
+        exclude_domains: input["exclude_domains"],
+        published_after: input["published_after"],
+        published_before: input["published_before"],
+        acquired_after: input["acquired_after"],
+        acquired_before: input["acquired_before"],
+        providerID: input["providerID"],
+      },
     }).pipe(Effect.mapError(mapClientError)),
   )
 
