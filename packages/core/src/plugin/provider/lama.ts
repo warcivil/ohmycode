@@ -1,3 +1,4 @@
+import { bindDeviceKey, deviceFetch, devicePublicKey } from "./lama-device.js"
 import { LamaAccountRpc } from "@opencode/schema/lama-account"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Effect, Schema, Schedule } from "effect"

@@ -146,8 +146,8 @@ it.live("account RPC uses the active credential and never returns its secret", (
       globalThis.fetch = Object.assign(
         async (input: string | URL | Request, init?: RequestInit) => {
           if (String(input).endsWith("/api/models/desktop")) return new Response(null, { status: 503 })
-          expect(String(input)).toBe("https://ohmylama.ru/v1/account")
-          authorization.push(new Headers(init?.headers).get("Authorization") ?? "")
+          expect(input instanceof Request ? input.url : String(input)).toBe("https://ohmylama.ru/v1/account")
+          authorization.push(new Headers(input instanceof Request ? input.headers : init?.headers).get("Authorization") ?? "")
           return replies.shift() ?? new Response(null, { status: 500 })
         },
         { preconnect: original.preconnect },

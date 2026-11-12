@@ -3,21 +3,21 @@ export * as WebSearchTool from "./websearch.js"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import type { SessionHooks } from "@opencode/plugin/effect/session"
 import { ToolFailure } from "@opencode/ai"
-import { Effect, Schema, Semaphore } from "effect"
+import { Effect, Schema } from "effect"
 import { HttpClientError } from "effect/unstable/http"
-import { Form } from "../../form.js"
 import { Permission } from "../../permission.js"
+import { LoginRequired } from "../../plugin/websearch/lama.js"
 import { WebSearch } from "../../websearch.js"
 
 export const name = "websearch"
 export const NO_RESULTS = "No search results found. Please try a different query."
-const providerSelectionLock = Semaphore.makeUnsafe(1)
 const httpErrors = new Map([
   [429, "Web search rate limited (HTTP 429)"],
-  [401, "Web search authentication failed (HTTP 401)"],
+  [401, "Подключите аккаунт OhMyLama через /connect (HTTP 401)"],
+  [402, "Недостаточно средств на балансе OhMyLama для веб-поиска (HTTP 402)"],
 ])
 
-export const description = `Search the web using the user's selected search integration. Use this for current information beyond knowledge cutoff.
+export const description = `Search the web using the built-in OhMyLama search. Use this for current information beyond knowledge cutoff.
 
 The current year is ${new Date().getFullYear()}. Use this year when searching for recent information or current events.`
 
@@ -33,7 +33,6 @@ export const Plugin = {
   id: "opencode.tool.websearch",
   effect: Effect.fn("WebSearchTool.Plugin")(function* (ctx: Context) {
     const permission = yield* Permission.Service
-    const forms = yield* Form.Service
     const websearch = yield* WebSearch.Service
 
     yield* ctx.tool
@@ -63,89 +62,7 @@ export const Plugin = {
                     onProvider: (provider) => context.progress({ provider: provider.id }),
                   },
                 )
-              const result = yield* search().pipe(
-                Effect.catchTag("WebSearch.ProviderRequired", () => {
-                  return providerSelectionLock
-                    .withPermit(
-                      Effect.gen(function* () {
-                        if (yield* websearch.default()) return
-                        const providers = (yield* ctx.websearch.providers()).data
-                        const defaultProvider = providers[0]
-                        if (!defaultProvider) return yield* new WebSearch.ProviderRequiredError()
-                        const response = yield* forms.ask({
-                          sessionID: context.sessionID,
-                          title: "Web Search",
-                          metadata: { kind: "websearch.provider" },
-                          fields: [
-                            {
-                              key: "choice",
-                              description: "Allow OpenCode to search the web for up-to-date information?",
-                              type: "string",
-                              required: true,
-                              custom: false,
-                              options: [
-                                {
-                                  value: "allow",
-                                  label: `Allow search via ${providers.map((provider) => provider.name).join(", ")}`,
-                                },
-                                {
-                                  value: "choose",
-                                  label: "Choose another provider",
-                                },
-                                { value: "disable", label: "Disable web search" },
-                              ],
-                            },
-                          ],
-                        })
-                        if (response.status === "cancelled")
-                          return yield* Effect.fail(new Error("Web search cancelled"))
-                        if (response.answer.choice === "disable") {
-                          yield* websearch.select(false)
-                          return yield* new WebSearch.DisabledError()
-                        }
-                        const selection =
-                          response.answer.choice === "choose"
-                            ? yield* forms.ask({
-                                sessionID: context.sessionID,
-                                title: "Choose a web search provider",
-                                metadata: { kind: "websearch.provider" },
-                                fields: [
-                                  {
-                                    key: "provider",
-                                    description: "Choose a provider for web search.",
-                                    type: "string",
-                                    required: true,
-                                    custom: false,
-                                    options: providers.map((provider) => ({
-                                      value: provider.id,
-                                      label: provider.name,
-                                    })),
-                                  },
-                                ],
-                              })
-                            : undefined
-                        if (selection?.status === "cancelled")
-                          return yield* Effect.fail(new Error("Web search cancelled"))
-                        const providerID = selection?.answer.provider ?? "random"
-                        if (providerID === "random") {
-                          yield* websearch.select("random")
-                          return
-                        }
-                        const provider = providers.find((provider) => provider.id === providerID)
-                        if (!provider) return yield* new WebSearch.ProviderRequiredError()
-                        yield* websearch.select(provider.id)
-                        return provider.id
-                      }),
-                    )
-                    .pipe(
-                      Effect.timeoutOrElse({
-                        duration: "1 minute",
-                        orElse: () => Effect.fail(new Error("Web search cancelled")),
-                      }),
-                      Effect.flatMap(search),
-                    )
-                }),
-              )
+              const result = yield* search()
               const output = {
                 provider: result.providerID,
                 results: result.results,
@@ -166,6 +83,11 @@ export const Plugin = {
               Effect.mapError((error) => {
                 const fallback = `Unable to search the web for ${input.query}`
                 if (!Schema.is(WebSearch.RequestError)(error)) return new ToolFailure({ message: fallback, error })
+                if (Schema.is(LoginRequired)(error.cause))
+                  return new ToolFailure({
+                    message: "Для веб-поиска подключите аккаунт OhMyLama через /connect.",
+                    error,
+                  })
                 const status = HttpClientError.isHttpClientError(error.cause) ? error.cause.response?.status : undefined
                 return new ToolFailure({
                   message:
