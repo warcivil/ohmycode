@@ -1,0 +1,26 @@
+name: OhMyCode experimental macOS release notes
+on:
+  push:
+    branches: [extra-platforms]
+    paths: [".github/workflows/ohmycode-mac-notes.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Describe platform verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > notes.txt <<'NOTES'
+          Экспериментальные сборки OhMyCode 2.0.24-ohmycode.32 для macOS.
+
+          Intel: проверены подпись приложения и запуск встроенного ядра на Intel-раннере.
+          Apple Silicon: пакет собирается на Intel-раннере с проверкой архитектуры ARM64 и подписи. Запуск на M-чипе ещё не проверен; файл появится в загрузках после успешной сборки.
+
+          Подпись ad-hoc, без Developer ID и нотариализации Apple. Полноценная проверка интерфейса на пользовательских Mac ещё нужна. Встроенное автообновление macOS отключено: новые версии устанавливаются вручную из .dmg.
+          NOTES
+          gh release edit ohmycode-2.0.24-ohmycode.32-experimental --notes-file notes.txt
