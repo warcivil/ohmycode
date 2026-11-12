@@ -54,7 +54,10 @@ test.each(channels)("channel identity for $channel", async ({ channel, appId, pa
   expect(config.linux?.desktop?.entry?.StartupWMClass).toBe(appId)
   expect(config.deb?.packageName).toBe(packageName)
   expect(config.rpm?.packageName).toBe(packageName)
+  expect(config.pacman?.packageName).toBe(packageName)
   expect(config.deb?.depends).toContain("libasound2")
+  expect(config.pacman?.depends).toContain("alsa-lib")
+  expect(config.pacman?.depends).toContain("libsecret")
   // Electron's sandbox launcher must be able to execute the install path without splitting it at spaces.
   expect(config.productName).not.toContain(" ")
   expect(config.linux?.desktop?.entry?.Name).toBe(
@@ -62,7 +65,7 @@ test.each(channels)("channel identity for $channel", async ({ channel, appId, pa
   )
   expect(config.artifactName).toBe(`ohmycode-${channel}-\${version}-\${os}-\${arch}.\${ext}`)
 
-  for (const fpm of [config.deb?.fpm, config.rpm?.fpm]) {
+  for (const fpm of [config.deb?.fpm, config.rpm?.fpm, config.pacman?.fpm]) {
     expect(fpm).toContainEqual(expect.stringContaining(`/usr/share/metainfo/${appId}.metainfo.xml`))
   }
 })

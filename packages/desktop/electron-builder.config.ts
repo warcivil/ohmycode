@@ -164,6 +164,13 @@ const getBase = (appId: string): Configuration => {
       ],
       fpm: [metainfoFpm(appId)],
     },
+    pacman: {
+      packageName: channel === "prod" ? "ohmycode" : `ohmycode-${channel}`,
+      afterInstall: path.join(packageDir, "resources/linux/after-install.tpl"),
+      // Electron is bundled; the builder's defaults include obsolete system-Electron dependencies.
+      depends: ["gtk3", "nss", "alsa-lib", "libxss", "libxtst", "libnotify", "libsecret", "libcups", "mesa", "xdg-utils"],
+      fpm: [metainfoFpm(appId)],
+    },
     win: {
       icon: `resources/icons/icon.ico`,
       signtoolOptions: {
