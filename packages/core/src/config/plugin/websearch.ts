@@ -13,7 +13,8 @@ export const Plugin = define({
     yield* ctx.websearch.transform((websearch) => {
       const selection = Config.latest(loaded.entries, "websearch")
       if (selection === false) websearch.default.set(false)
-      if (selection) websearch.default.set(selection.provider)
+      // Migrate old provider choices to product search; keep explicit opt-out.
+      if (selection !== false) websearch.default.set("ohmylama")
     })
   }),
 })

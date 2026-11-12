@@ -1,13 +1,4 @@
-import { WebSearchExa } from "./exa.js"
-import { WebSearchFirecrawl } from "./firecrawl.js"
-import { WebSearchParallel } from "./parallel.js"
-import { WebSearchTavily } from "./tavily.js"
-import { WebSearchTinyFish } from "./tinyfish.js"
+import { WebSearchLama } from "./lama.js"
 
-export const WebSearchPlugins = [
-  WebSearchExa.Plugin,
-  WebSearchFirecrawl.Plugin,
-  WebSearchParallel.Plugin,
-  WebSearchTavily.Plugin,
-  WebSearchTinyFish.Plugin,
-] as const
+// Product search runs through the authenticated OhMyLama backend only.
+export const WebSearchPlugins = [WebSearchLama.Plugin] as const
