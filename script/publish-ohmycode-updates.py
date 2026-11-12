@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify and publish a matching pair of OhMyCode Dev installers and update manifests."""
+"""Verify and publish a matching pair of OhMyCode installers and update manifests."""
 import argparse
 import base64
 import hashlib
@@ -24,6 +24,7 @@ def checksum(path):
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--ubuntu", type=Path, required=True)
 parser.add_argument("--windows", type=Path, required=True)
+parser.add_argument("--channel", choices=["dev", "prod"], default="dev")
 parser.add_argument("--server", default="root@82.202.171.13")
 parser.add_argument("--check-only", action="store_true")
 parser.add_argument("--notes", required=True, help="Public release description (no credentials or supplier details)")
@@ -35,12 +36,12 @@ for folder, manifest_name, suffix in [(args.ubuntu, "latest-linux.yml", "-linux-
     manifest = folder / manifest_name
     data = yaml.safe_load(manifest.read_text())
     version = data["version"]
-    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-ohmycode\.[0-9]+", version), "Expected an OhMyCode Dev version"
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-ohmycode\.[0-9]+)?", version), "Expected an OhMyCode version"
     versions.append(version)
     assert len(data["files"]) == 1, "Expected one x64 installer per platform"
     entry = data["files"][0]
     name = entry["url"]
-    assert name == f"ohmycode-dev-{version}{suffix}", "Unexpected installer URL"
+    assert name == f"ohmycode-{args.channel}-{version}{suffix}", "Unexpected installer URL"
     installer = folder / name
     digest = checksum(installer)
     assert digest == entry["sha512"], f"Installer checksum mismatch: {name}"
@@ -60,7 +61,7 @@ staging = "/tmp/ohmycode-update-" + uuid.uuid4().hex
 subprocess.run(["ssh", args.server, "mkdir", "-p", staging], check=True)
 with tempfile.TemporaryDirectory(prefix="ohmycode-publish-") as tmp:
     plan = Path(tmp) / "plan.json"
-    plan.write_text(json.dumps({"version": versions[0], "notes": args.notes, "files": {
+    plan.write_text(json.dumps({"version": versions[0], "channel": args.channel, "notes": args.notes, "files": {
         name: {"sha512": checksum(path), "size": path.stat().st_size}
         for name, path in files.items()
     }}))
@@ -78,7 +79,8 @@ def checksum(path):
 staging = Path(sys.argv[1])
 plan = json.loads((staging / 'plan.json').read_text())
 root = Path('/opt/ohmylama/backend/uploads/ohmycode-updates')
-feed = root / 'dev'
+assert plan['channel'] in ['dev', 'prod'], 'Invalid channel'
+feed = root / plan['channel']
 feed.mkdir(parents=True, exist_ok=True)
 for manifest_name in ['latest.yml', 'latest-linux.yml']:
     previous = feed / manifest_name
@@ -107,6 +109,6 @@ for name in ['latest.yml', 'latest-linux.yml']:
     os.replace(staging / name, feed / name)
 (staging / 'plan.json').unlink()
 staging.rmdir()
-print('Published OhMyCode Dev feed:', plan['version'])
+print('Published OhMyCode feed:', plan['channel'], plan['version'])
 """
     subprocess.run(["ssh", args.server, "python3", "-", shlex.quote(staging)], input=remote, text=True, check=True)
