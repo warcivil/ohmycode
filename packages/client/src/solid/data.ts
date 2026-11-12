@@ -697,6 +697,10 @@ export function createData(config: CreateDataInput) {
         })
         return
       }
+      case "session.compaction.configured":
+        if (store.session.info[event.data.sessionID])
+          setStore("session", "info", event.data.sessionID, "compaction", reconcile(event.data.compaction))
+        return
       case "session.permissions":
         if (store.session.info[event.data.sessionID])
           setStore("session", "info", event.data.sessionID, "permissions", event.data.permissions)
@@ -1048,7 +1052,8 @@ export function createData(config: CreateDataInput) {
             (item) =>
               item.type === "assistant" &&
               item.content.some(
-                (part) => part.type === "tool" && (part.state.status === "streaming" || part.state.status === "running"),
+                (part) =>
+                  part.type === "tool" && (part.state.status === "streaming" || part.state.status === "running"),
               ),
           )
         ) {

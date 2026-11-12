@@ -49,6 +49,8 @@ export type TokenUsageInfo = {
 
 export type SessionMetadata = { [x: string]: JsonValue }
 
+export type SessionCompactionSettings = { auto?: boolean; threshold?: number }
+
 export type FileDiffInfo = {
   file: string
   patch: string
@@ -1254,6 +1256,16 @@ export type SessionMetadataUpdated = {
   data: { sessionID: string; metadata: SessionMetadata }
 }
 
+export type SessionCompactionConfigured = {
+  id: string
+  created: number
+  metadata?: { [x: string]: any }
+  type: "session.compaction.configured"
+  durable: { aggregateID: string; seq: number; version: 1 }
+  location?: LocationRef
+  data: { sessionID: string; compaction: SessionCompactionSettings }
+}
+
 export type SessionShellStarted = {
   id: string
   created: number
@@ -2006,6 +2018,7 @@ export type SessionInfo = {
   title?: string
   subpath?: string
   metadata?: SessionMetadata
+  compaction?: SessionCompactionSettings
   permissions?: PermissionRuleset
   revert?: SessionRevert
   location: LocationPublicRef
@@ -2029,6 +2042,7 @@ export type SessionCreated = {
     agent?: string
     model?: ModelRef
     metadata?: SessionMetadata
+    compaction?: SessionCompactionSettings
     permissions?: PermissionRuleset
     version: string
   }
@@ -2373,6 +2387,7 @@ export type SessionEventDurable =
   | SessionMoved
   | SessionRenamed
   | SessionMetadataUpdated
+  | SessionCompactionConfigured
   | SessionPermissions
   | SessionViewed
   | SessionDeleted
@@ -2436,6 +2451,7 @@ export type V2Event =
   | SessionMoved
   | SessionRenamed
   | SessionMetadataUpdated
+  | SessionCompactionConfigured
   | SessionPermissions
   | SessionViewed
   | SessionUsageUpdated
@@ -3088,6 +3104,7 @@ export type SessionImportInput = {
       readonly title?: string
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
+      readonly compaction?: { readonly auto?: boolean; readonly threshold?: number }
       readonly permissions?: ReadonlyArray<{
         readonly action: string
         readonly resource: string
@@ -3425,6 +3442,7 @@ export type SessionImportInput = {
       readonly title?: string
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
+      readonly compaction?: { readonly auto?: boolean; readonly threshold?: number }
       readonly permissions?: ReadonlyArray<{
         readonly action: string
         readonly resource: string
@@ -3762,6 +3780,7 @@ export type SessionImportInput = {
       readonly title?: string
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
+      readonly compaction?: { readonly auto?: boolean; readonly threshold?: number }
       readonly permissions?: ReadonlyArray<{
         readonly action: string
         readonly resource: string
@@ -4115,25 +4134,44 @@ export type SessionSwitchModelOutput = void
 export type SessionUpdateInput = {
   readonly sessionID: { readonly sessionID: string }["sessionID"]
   readonly title?: {
-    readonly title?: string | undefined
-    readonly metadata?: { readonly [x: string]: JsonValue } | undefined
-    readonly permissions?:
-      | ReadonlyArray<{ readonly action: string; readonly resource: string; readonly effect: "allow" | "deny" | "ask" }>
-      | undefined
+    readonly title?: string | null
+    readonly compaction?: { readonly auto?: boolean; readonly threshold?: number } | null
+    readonly metadata?: { readonly [x: string]: JsonValue } | null
+    readonly permissions?: ReadonlyArray<{
+      readonly action: string
+      readonly resource: string
+      readonly effect: "allow" | "deny" | "ask"
+    }> | null
   }["title"]
+  readonly compaction?: {
+    readonly title?: string | null
+    readonly compaction?: { readonly auto?: boolean; readonly threshold?: number } | null
+    readonly metadata?: { readonly [x: string]: JsonValue } | null
+    readonly permissions?: ReadonlyArray<{
+      readonly action: string
+      readonly resource: string
+      readonly effect: "allow" | "deny" | "ask"
+    }> | null
+  }["compaction"]
   readonly metadata?: {
-    readonly title?: string | undefined
-    readonly metadata?: { readonly [x: string]: JsonValue } | undefined
-    readonly permissions?:
-      | ReadonlyArray<{ readonly action: string; readonly resource: string; readonly effect: "allow" | "deny" | "ask" }>
-      | undefined
+    readonly title?: string | null
+    readonly compaction?: { readonly auto?: boolean; readonly threshold?: number } | null
+    readonly metadata?: { readonly [x: string]: JsonValue } | null
+    readonly permissions?: ReadonlyArray<{
+      readonly action: string
+      readonly resource: string
+      readonly effect: "allow" | "deny" | "ask"
+    }> | null
   }["metadata"]
   readonly permissions?: {
-    readonly title?: string | undefined
-    readonly metadata?: { readonly [x: string]: JsonValue } | undefined
-    readonly permissions?:
-      | ReadonlyArray<{ readonly action: string; readonly resource: string; readonly effect: "allow" | "deny" | "ask" }>
-      | undefined
+    readonly title?: string | null
+    readonly compaction?: { readonly auto?: boolean; readonly threshold?: number } | null
+    readonly metadata?: { readonly [x: string]: JsonValue } | null
+    readonly permissions?: ReadonlyArray<{
+      readonly action: string
+      readonly resource: string
+      readonly effect: "allow" | "deny" | "ask"
+    }> | null
   }["permissions"]
 }
 

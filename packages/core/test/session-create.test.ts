@@ -408,6 +408,28 @@ describe("Session.create", () => {
     }),
   )
 
+  it.effect("persists session compaction preferences, inherits them and resets to defaults", () =>
+    Effect.gen(function* () {
+      const session = yield* Session.Service
+      const bus = yield* Bus.Service
+      const { db } = yield* Database.Service
+      const created = yield* session.create({ location })
+      expect(created.compaction).toBeUndefined()
+      const compaction = { auto: false, threshold: 70 }
+      yield* session.setCompaction({ sessionID: created.id, compaction })
+      expect((yield* session.get(created.id)).compaction).toEqual(compaction)
+      expect((yield* session.create({ parentID: created.id })).compaction).toEqual(compaction)
+      yield* session.prompt({ sessionID: created.id, text: "Fork context", resume: false })
+      yield* SessionInbox.promote(db, bus, created.id, "steer")
+      expect((yield* session.fork({ sessionID: created.id })).compaction).toEqual(compaction)
+      yield* session.setCompaction({ sessionID: created.id, compaction: {} })
+      expect((yield* session.get(created.id)).compaction).toEqual({})
+      expect(
+        yield* session.setCompaction({ sessionID: Session.ID.create(), compaction }).pipe(Effect.flip),
+      ).toBeInstanceOf(Session.NotFoundError)
+    }),
+  )
+
   it.effect("stores permission rules, inherits them through children and forks, and replaces them", () =>
     Effect.gen(function* () {
       const session = yield* Session.Service
@@ -809,9 +831,10 @@ describe("Session.create", () => {
       const session = yield* Session.Service
       const parent = yield* session.create({ location })
 
-      expect(
-        yield* session.fork({ sessionID: parent.id }).pipe(Effect.flip),
-      ).toMatchObject({ _tag: "Session.ForkEmptyError", sessionID: parent.id })
+      expect(yield* session.fork({ sessionID: parent.id }).pipe(Effect.flip)).toMatchObject({
+        _tag: "Session.ForkEmptyError",
+        sessionID: parent.id,
+      })
     }),
   )
 

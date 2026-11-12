@@ -226,6 +226,35 @@ it.effect("auto compaction estimates current content against the buffered prompt
       ).toBe(expected)
     }
 
+    // A custom percentage can raise LAMA's old 200k threshold on a large-window model.
+    const large = input(300_000, { context: 1_000_000, output: 128_000 })
+    const lama = Provider.ID.make("ohmylama")
+    expect(
+      yield* due({
+        ...large,
+        session: { ...session, compaction: { threshold: 70 } },
+        model: { ...large.model, ref: { ...large.model.ref, providerID: lama } },
+        messages: large.messages.map((message) => ({ ...message, model: { ...message.model, providerID: lama } })),
+      }),
+    ).toBe(false)
+
+    // Per-chat percentages override defaults and follow the selected input window.
+    for (const [tokens, threshold, expected] of [
+      [139_999, 70, false],
+      [140_000, 70, true],
+      [179_999, 99, false],
+      [180_000, 99, true],
+    ] as const) {
+      const selected = input(tokens, { context: 200_000, output: 32_000 })
+      expect(yield* due({ ...selected, session: { ...session, compaction: { threshold } } })).toBe(expected)
+    }
+    const disabled = {
+      ...input(300_000, { context: 200_000, output: 32_000 }),
+      session: { ...session, compaction: { auto: false } },
+    }
+    expect(yield* due(disabled)).toBe(false)
+    expect((yield* compaction.compact({ reason: "overflow", context: disabled })).status).toBe("skipped")
+
     // 90% of the input limit, which takes precedence over the context window.
     const inputLimited = { context: 400_000, input: 272_000, output: 128_000 }
     expect(yield* due(input(244_799, inputLimited))).toBe(false)
@@ -428,7 +457,7 @@ it.effect("manual compaction summarizes short context instead of no-op", () =>
       ],
       time: { created: DateTime.makeUnsafe(0) },
     }
-    const session = yield* insertSession(sessionID, { parent_id: parentID })
+    const session = yield* insertSession(sessionID, { parent_id: parentID, compaction: { auto: false } })
     const hooks = yield* PluginHooks.Service
     let hooked = 0
     yield* hooks.register("session", "compaction", (event) =>

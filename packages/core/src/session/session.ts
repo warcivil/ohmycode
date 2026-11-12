@@ -79,6 +79,13 @@ export const make = Effect.fn("Session.make")(function* () {
     yield* get(sessionID)
     yield* bus.publish(SessionEvent.MetadataUpdated, { sessionID, metadata: input.metadata })
   })
+  const setCompaction = Effect.fn("Session.setCompaction")(function* (
+    sessionID: SessionSchema.ID,
+    input: { compaction: SessionSchema.CompactionSettings },
+  ) {
+    yield* get(sessionID)
+    yield* bus.publish(SessionEvent.CompactionConfigured, { sessionID, compaction: input.compaction })
+  })
   const setPermissions = Effect.fn("Session.setPermissions")(function* (
     sessionID: SessionSchema.ID,
     input: { permissions: Permission.Ruleset },
@@ -349,6 +356,7 @@ export const make = Effect.fn("Session.make")(function* () {
     view,
     rename,
     setMetadata,
+    setCompaction,
     setPermissions,
     switchAgent,
     switchModel,
@@ -373,6 +381,7 @@ export const make = Effect.fn("Session.make")(function* () {
     const view = operations.view.bind(undefined, sessionID)
     const rename = operations.rename.bind(undefined, sessionID)
     const setMetadata = operations.setMetadata.bind(undefined, sessionID)
+    const setCompaction = operations.setCompaction.bind(undefined, sessionID)
     const setPermissions = operations.setPermissions.bind(undefined, sessionID)
     const switchAgent = operations.switchAgent.bind(undefined, sessionID)
     const switchModel = operations.switchModel.bind(undefined, sessionID)
@@ -400,6 +409,7 @@ export const make = Effect.fn("Session.make")(function* () {
       view,
       rename,
       setMetadata,
+      setCompaction,
       setPermissions,
       switchAgent,
       switchModel,

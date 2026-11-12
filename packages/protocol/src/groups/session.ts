@@ -361,6 +361,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
         params: { sessionID: Session.ID },
         payload: Schema.Struct({
           title: Schema.String.pipe(Schema.optional),
+          compaction: Session.CompactionSettings.pipe(Schema.optional),
           metadata: Session.Metadata.pipe(Schema.optional),
           permissions: Permission.Ruleset.pipe(Schema.optional),
         }),
