@@ -5,6 +5,7 @@ const Calls = Schema.Array(Schema.Struct({ tool: Schema.String, status: Schema.S
 
 const Labels: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "telegram_send_file": ["Отправляет файл в чат", "Отправил файл в чат", "Отправка файлов"],
+  "websearch": ["Ищет в интернете", "Завершил веб-поиск", "Веб-поиск"],
   "webfetch": ["Читает страницу", "Прочитал страницу", "Webfetch"],
   "read": ["Читает файл", "Прочитал файл", "Чтение файлов"],
   "glob": ["Ищет файлы", "Выполнил поиск файлов", "Поиск файлов"],
