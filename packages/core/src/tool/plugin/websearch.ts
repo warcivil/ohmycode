@@ -8,6 +8,7 @@ import { HttpClientError } from "effect/unstable/http"
 import { Permission } from "../../permission.js"
 import { LoginRequired } from "../../plugin/websearch/lama.js"
 import { WebSearch } from "../../websearch.js"
+import { SearchInput } from "@opencode/schema/websearch"
 
 export const name = "websearch"
 export const NO_RESULTS = "No search results found. Please try a different query."
@@ -18,12 +19,11 @@ const httpErrors = new Map([
 ])
 
 export const description = `Search the web using the built-in OhMyLama search. Use this for current information beyond knowledge cutoff.
+Use pro for research and best ranking, realtime for fast lookups. Describe the desired information in natural language. For recent news, use published_after (for example 7d); realtime alone is not a recency filter. Use site or exclude_domains to control sources. Read and compare result snippets, cite their URLs, and use webfetch when you need the full page. Do not treat search excerpts as complete documents or assume results are relevant just because the search succeeded.
 
 The current year is ${new Date().getFullYear()}. Use this year when searching for recent information or current events.`
 
-export const Input = Schema.Struct({
-  query: Schema.String.annotate({ description: "Websearch query" }),
-})
+export const Input = SearchInput
 
 const Output = Schema.Struct({
   provider: WebSearch.ID,

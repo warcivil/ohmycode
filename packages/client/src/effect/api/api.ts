@@ -2374,6 +2374,15 @@ export type WebsearchProvidersOperation<E = never> = (
 export type WebsearchQueryInput = {
   readonly location?: { readonly directory?: string | undefined } | undefined
   readonly query: string
+  readonly mode?: "pro" | "realtime" | undefined
+  readonly max_results?: number | undefined
+  readonly snippet_max_length?: number | undefined
+  readonly site?: string | undefined
+  readonly exclude_domains?: ReadonlyArray<string> | undefined
+  readonly published_after?: string | undefined
+  readonly published_before?: string | undefined
+  readonly acquired_after?: string | undefined
+  readonly acquired_before?: string | undefined
   readonly providerID?: WebSearch.ID | undefined
 }
 export type WebsearchQueryOutput = { readonly location: Location.PublicRef; readonly data: WebSearch.Response }

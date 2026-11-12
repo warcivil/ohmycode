@@ -6657,8 +6657,149 @@ export type WebsearchProvidersOutput = { location: LocationPublicRef; data: Arra
 
 export type WebsearchQueryInput = {
   readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
-  readonly query: { readonly query: string; readonly providerID?: string }["query"]
-  readonly providerID?: { readonly query: string; readonly providerID?: string }["providerID"]
+  readonly query: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["query"]
+  readonly mode?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["mode"]
+  readonly max_results?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["max_results"]
+  readonly snippet_max_length?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["snippet_max_length"]
+  readonly site?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["site"]
+  readonly exclude_domains?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["exclude_domains"]
+  readonly published_after?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["published_after"]
+  readonly published_before?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["published_before"]
+  readonly acquired_after?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["acquired_after"]
+  readonly acquired_before?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["acquired_before"]
+  readonly providerID?: {
+    readonly query: string
+    readonly mode?: "pro" | "realtime" | null
+    readonly max_results?: number | null
+    readonly snippet_max_length?: number | null
+    readonly site?: string | null
+    readonly exclude_domains?: ReadonlyArray<string> | null
+    readonly published_after?: string | null
+    readonly published_before?: string | null
+    readonly acquired_after?: string | null
+    readonly acquired_before?: string | null
+    readonly providerID?: string
+  }["providerID"]
 }
 
 export type WebsearchQueryOutput = {
