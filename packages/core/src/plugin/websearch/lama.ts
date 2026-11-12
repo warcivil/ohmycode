@@ -3,7 +3,6 @@ export * as WebSearchLama from "./lama.js"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Duration, Effect, Schema, Scope } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
-import { signLamaHttp } from "../provider/lama-http.js"
 import { SearchInput } from "@opencode/schema/websearch"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
@@ -49,10 +48,8 @@ export const Plugin = define<HttpClient.HttpClient | Credential.Service | Scope.
                 snippet_max_length: input.snippet_max_length ?? 3500,
               }),
             )
-            const signed = yield* signLamaHttp(request)
-            if (!signed.headers["x-ohmycode-signature"]) return yield* Effect.fail(new LoginRequired({}))
             const response = yield* HttpClient.withScope(HttpClient.filterStatusOk(http))
-              .execute(signed)
+              .execute(request)
               .pipe(
                 Effect.flatMap(HttpClientResponse.schemaBodyJson(SearchResponse)),
                 Effect.scoped,

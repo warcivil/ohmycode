@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect } from "bun:test"
 import { Effect } from "effect"
-import { bindDeviceKey, devicePublicKey } from "@opencode/core/plugin/provider/lama-device"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { WebSearch } from "@opencode/core/websearch"
@@ -8,18 +7,13 @@ import { WebSearchLama } from "@opencode/core/plugin/websearch/lama"
 import { host, webSearchHost } from "./host"
 import { requests, resetWebSearchFixture, webSearchIntegrationTest as it } from "./websearch-fixture"
 
-beforeEach(async () => {
-  await devicePublicKey()
-  await bindDeviceKey("test-lama-key")
-})
-
 beforeEach(() =>
   resetWebSearchFixture(
     JSON.stringify({ results: [{ title: "Docs", url: "https://example.com", snippet: "Documentation" }] }),
   ),
 )
 describe("OhMyLama native search", () => {
-  it.effect("uses connected credentials without a provider picker", () =>
+  it.effect("accepts a manual API key without device binding or provider picker", () =>
     Effect.gen(function* () {
       const credentials = yield* Credential.Service
       const search = yield* WebSearch.Service
@@ -32,7 +26,6 @@ describe("OhMyLama native search", () => {
       expect(result.providerID).toBe(WebSearch.ID.make("ohmylama"))
       expect(result.results[0]?.content).toBe("Documentation")
       expect(requests).toHaveLength(1)
-      expect(requests[0]?.headers["x-ohmycode-signature"]).toBeTruthy()
       expect(requests[0]?.url).toBe("https://ohmylama.ru/v1/web/search")
       expect(requests[0]?.headers.authorization).toBe("Bearer test-lama-key")
       expect(requests[0]?.body).toEqual({
@@ -55,7 +48,6 @@ describe("OhMyLama native search", () => {
       yield* WebSearchLama.Plugin.effect(host({ websearch: webSearchHost(search) }))
       expect(yield* search.query({ query: "documentation" }).pipe(Effect.flip)).toBeInstanceOf(WebSearch.RequestError)
       expect(requests).toHaveLength(1)
-      expect(requests[0]?.headers["x-ohmycode-signature"]).toBeTruthy()
     }),
   )
   it.effect("forwards native options and retains publication dates", () =>
