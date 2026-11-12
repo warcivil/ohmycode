@@ -1,0 +1,82 @@
+name: OhMyCode Apple Silicon cross build
+on:
+  push:
+    branches: [extra-platforms]
+    paths: [".github/workflows/ohmycode-arm-intel.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: macos-26-intel
+            arch: arm64
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 45
+    env:
+      OHMYCODE_BUILD_CHANNEL: prod
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.32
+      OPENCODE_CHANNEL: prod
+      OPENCODE_VERSION: 2.0.24-ohmycode.32
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - name: Cancel unavailable ARM runner attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh run cancel 43262999710 || true
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ./.github/actions/setup-bun
+      - name: Build desktop and native CLI
+        run: |
+          bun run build:ohmycode
+          bun packages/cli/script/build.ts --target=opencode-darwin-arm64 --skip-install --skip-web-ui
+          cp packages/cli/dist/cli-darwin-arm64/bin/opencode packages/desktop/resources/opencode-cli
+          test "$(cat packages/desktop/resources/opencode-cli.version)" = "$OPENCODE_VERSION"
+
+      - name: Package test installers with ad-hoc signing
+        working-directory: packages/desktop
+        run: bun run package:mac -- --${{ matrix.arch }} --publish never -c.mac.identity=- -c.mac.notarize=false
+      - name: Verify bundled CLI and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find packages/desktop/dist -maxdepth 2 -name '*.app' -type d | head -1)
+          test -n "$app"
+          cli="$app/Contents/Resources/opencode-cli"
+          test "$(lipo -archs "$cli")" = "arm64"
+          test "$(lipo -archs "$app/Contents/MacOS/OhMyCode")" = "arm64"
+          codesign --verify --deep --strict "$app"
+          file "$cli"
+          python3 - <<'PY'
+          import pathlib,hashlib
+          root=pathlib.Path('packages/desktop/dist')
+          files=sorted(p for p in root.iterdir() if p.suffix in ('.dmg','.zip'))
+          assert len(files)==2
+          (root/'SHA256SUMS-macos-${{ matrix.arch }}.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in files))
+          PY
+      - name: Save test packages only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ohmycode-macos-test-${{ matrix.arch }}
+          path: |
+            packages/desktop/dist/*.dmg
+            packages/desktop/dist/*.zip
+            packages/desktop/dist/SHA256SUMS-macos-*.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Save experimental downloads
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="ohmycode-$OHMYCODE_BUILD_VERSION-experimental"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "OhMyCode $OHMYCODE_BUILD_VERSION — experimental macOS" --notes 'Пробные сборки macOS для Apple Silicon и Intel. Intel: проверены подпись и запуск ядра. Apple Silicon: проверены подпись и архитектура, запуск на M-чипе ещё не проверен. Подпись ad-hoc, без нотариализации Apple; полноценная проверка интерфейса на пользовательских Mac ещё нужна.' || gh release view "$tag" >/dev/null
+          gh release upload "$tag" packages/desktop/dist/*.dmg packages/desktop/dist/*.zip packages/desktop/dist/SHA256SUMS-macos-*.txt

@@ -24,6 +24,7 @@ def checksum(path):
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--ubuntu", type=Path, required=True)
 parser.add_argument("--windows", type=Path, required=True)
+parser.add_argument("--arch", type=Path, help="Arch package and its latest-linux.yml; merged into the Linux feed")
 parser.add_argument("--channel", choices=["dev", "prod"], default="dev")
 parser.add_argument("--server", default="root@82.202.171.13")
 parser.add_argument("--check-only", action="store_true")
@@ -32,7 +33,11 @@ args = parser.parse_args()
 assert re.fullmatch(r"[a-zA-Z0-9_.@-]+", args.server), "Invalid SSH destination"
 files = {}
 versions = []
-for folder, manifest_name, suffix in [(args.ubuntu, "latest-linux.yml", "-linux-amd64.deb"), (args.windows, "latest.yml", "-win-x64.exe")]:
+arch_entry = None
+platforms = [(args.ubuntu, "latest-linux.yml", "-linux-amd64.deb"), (args.windows, "latest.yml", "-win-x64.exe")]
+if args.arch:
+    platforms.append((args.arch, "latest-linux.yml", "-linux-x64.pacman"))
+for folder, manifest_name, suffix in platforms:
     manifest = folder / manifest_name
     data = yaml.safe_load(manifest.read_text())
     version = data["version"]
@@ -47,11 +52,14 @@ for folder, manifest_name, suffix in [(args.ubuntu, "latest-linux.yml", "-linux-
     assert digest == entry["sha512"], f"Installer checksum mismatch: {name}"
     assert installer.stat().st_size == entry["size"], f"Installer size mismatch: {name}"
     files[name] = installer
-    files[manifest_name] = manifest
+    if suffix == "-linux-x64.pacman":
+        arch_entry = entry
+    else:
+        files[manifest_name] = manifest
     blockmap = folder / (name + ".blockmap")
     if blockmap.exists():
         files[blockmap.name] = blockmap
-assert versions[0] == versions[1], "Windows and Ubuntu must have the same version"
+assert len(set(versions)) == 1, "All platforms must have the same version"
 print(f"Verified Windows and Ubuntu update manifests: {versions[0]}", flush=True)
 if args.check_only:
     raise SystemExit()
@@ -60,6 +68,12 @@ if args.check_only:
 staging = "/tmp/ohmycode-update-" + uuid.uuid4().hex
 subprocess.run(["ssh", args.server, "mkdir", "-p", staging], check=True)
 with tempfile.TemporaryDirectory(prefix="ohmycode-publish-") as tmp:
+    if arch_entry:
+        merged = yaml.safe_load(files["latest-linux.yml"].read_text())
+        merged["files"].append(arch_entry)
+        manifest = Path(tmp) / "latest-linux.yml"
+        manifest.write_text(yaml.safe_dump(merged, sort_keys=False))
+        files["latest-linux.yml"] = manifest
     plan = Path(tmp) / "plan.json"
     plan.write_text(json.dumps({"version": versions[0], "channel": args.channel, "notes": args.notes, "files": {
         name: {"sha512": checksum(path), "size": path.stat().st_size}
@@ -88,6 +102,8 @@ for manifest_name in ['latest.yml', 'latest-linux.yml']:
         match = re.search(r'^version: ([^\n]+)', previous.read_text(), re.MULTILINE)
         assert match, 'Existing update manifest is invalid'
         assert tuple(map(int, re.findall(r'\d+', plan['version']))) >= tuple(map(int, re.findall(r'\d+', match.group(1)))), 'Refusing to roll back the published feed'
+        if manifest_name == 'latest-linux.yml' and '.pacman' in previous.read_text():
+            assert any(name.endswith('.pacman') for name in plan['files']), 'Arch is already published; include --arch to keep its updates working'
 for name, expected in plan['files'].items():
     assert Path(name).name == name, 'Unsafe asset name'
     path = staging / name
