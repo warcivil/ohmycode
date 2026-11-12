@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: read
 jobs:
   notes:
     runs-on: ubuntu-latest
@@ -24,3 +25,16 @@ jobs:
           Подпись ad-hoc, без Developer ID и нотариализации Apple. Полноценная проверка интерфейса на пользовательских Mac ещё нужна. Встроенное автообновление macOS отключено: новые версии устанавливаются вручную из .dmg.
           NOTES
           gh release edit ohmycode-2.0.24-ohmycode.32-experimental --notes-file notes.txt
+      - name: Report cross-build error
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh run view 43264436331 --log-failed > failed-build.log
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          lines=Path('failed-build.log').read_text().splitlines()
+          selected=[x for x in lines if any(word in x for word in ['error:', 'Error:', 'Cannot', 'Could not', 'ENOENT', 'failed', 'Unknown', 'not found', 'Unsupported'])][-25:]
+          message='\n'.join(selected or lines[-30:])
+          print('::notice title=Apple Silicon build diagnostic::'+message.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
