@@ -142,6 +142,7 @@ const createModelsController = (directory: Accessor<string | undefined>) => {
   }
 
   return {
+    directory,
     ready: models.ready,
     list,
     find,

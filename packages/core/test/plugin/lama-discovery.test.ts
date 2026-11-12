@@ -22,11 +22,12 @@ const snapshot = { schema_version: 1, revision: "a".repeat(64), models: [model] 
 test("catalog survives offline, invalid data and removals, and honors ETag", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "lama-catalog-"))
   const file = path.join(directory, "models.json")
-  const state = { body: snapshot, status: 200, etag: "" }
+  const state = { body: snapshot, status: 200, etag: "", cacheControl: "" }
   const server = Bun.serve({
     port: 0,
     fetch(request) {
       state.etag = request.headers.get("if-none-match") ?? ""
+      state.cacheControl = request.headers.get("cache-control") ?? ""
       if (state.status !== 200) return new Response(null, { status: state.status })
       return Response.json(state.body)
     },
@@ -46,6 +47,11 @@ test("catalog survives offline, invalid data and removals, and honors ETag", asy
     state.status = 304
     expect(await discovery.refresh()).toBeUndefined()
     expect(state.etag).toBe(`"${snapshot.revision}"`)
+    expect(state.cacheControl).toBe("")
+    state.status = 200
+    expect(await discovery.refresh({ force: true })).toEqual(decodeLamaCatalog(snapshot))
+    expect(state.etag).toBe("")
+    expect(state.cacheControl).toBe("no-cache")
     state.status = 503
     await expect(discovery.refresh()).rejects.toThrow("503")
     state.status = 200

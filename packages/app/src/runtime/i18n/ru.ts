@@ -37,6 +37,7 @@ export const dict = {
   "lama.account.note": "Используется API-баланс. Подписка на чат не расходуется.",
   "lama.account.refresh": "Обновить баланс",
   "lama.account.topup": "Пополнить",
+  "lama.models.refresh": "Обновить список моделей",
 
   "lama.status.up": "Работает",
   "lama.status.slow": "Отвечает медленно",

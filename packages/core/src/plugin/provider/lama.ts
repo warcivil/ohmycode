@@ -1,6 +1,6 @@
 import { LamaAccountRpc } from "@opencode/schema/lama-account"
 import { define } from "@opencode/plugin/effect/plugin"
-import { Effect, Schema, Schedule } from "effect"
+import { Effect, Schema, Schedule, Semaphore } from "effect"
 import { Path } from "@opencode/util/global"
 import { readFile, realpath, stat } from "node:fs/promises"
 import path from "node:path"
@@ -98,8 +98,26 @@ export const LamaPlugin = define({
     const discovery = createLamaDiscovery(path.join(Path.cache, "lama-models-v1.json"))
     const cached = yield* Effect.promise(() => discovery.read())
     const inventory = { models: mergeLamaModels(lamaModels(), cached), revision: cached?.revision }
+    const semaphore = Semaphore.makeUnsafe(1)
+    const refreshCatalog = (force = false) =>
+      semaphore.withPermits(1)(
+        Effect.gen(function* () {
+          const remote = yield* Effect.tryPromise(() => discovery.refresh({ force }))
+          if (!remote) return false
+          const changed = remote.revision !== inventory.revision
+          inventory.models = mergeLamaModels(inventory.models, remote)
+          inventory.revision = remote.revision
+          if (changed || force) yield* ctx.provider.reload()
+          return changed
+        }),
+      )
     yield* ctx.rpc
       .register(LamaAccountRpc, {
+        refresh: () =>
+          refreshCatalog(true).pipe(
+            Effect.map((updated) => ({ updated })),
+            Effect.catch(() => Effect.succeed({ updated: false })),
+          ),
         transcribe: (input) => Effect.gen(function* () {
           const saved = (yield* credentials.list(Integration.ID.make(providerID))).at(-1)?.value
           const key = saved?.type === "key" ? saved.key : saved?.type === "oauth" ? saved.access : process.env.LAMA_API_KEY
@@ -229,14 +247,7 @@ export const LamaPlugin = define({
         models: inventory.models,
       })
     })
-    const refresh = Effect.gen(function* () {
-      const remote = yield* Effect.tryPromise(() => discovery.refresh())
-      if (!remote || remote.revision === inventory.revision) return
-      inventory.models = mergeLamaModels(inventory.models, remote)
-      inventory.revision = remote.revision
-      yield* ctx.provider.reload()
-    })
-    yield* refresh.pipe(Effect.ignore, Effect.repeat(Schedule.spaced("1 hour")), Effect.forkScoped)
+    yield* refreshCatalog(false).pipe(Effect.ignore, Effect.repeat(Schedule.spaced("1 hour")), Effect.forkScoped)
   }),
 })
 

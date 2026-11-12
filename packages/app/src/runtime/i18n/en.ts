@@ -33,6 +33,7 @@ export const dict = {
   "lama.account.note": "Uses your API balance. Chat subscription is not consumed.",
   "lama.account.refresh": "Refresh balance",
   "lama.account.topup": "Top up",
+  "lama.models.refresh": "Refresh models",
 
   "lama.status.up": "Online",
   "lama.status.slow": "Slow",

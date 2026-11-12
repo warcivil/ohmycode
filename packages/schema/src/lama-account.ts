@@ -10,6 +10,7 @@ export const LamaAccountRpc = Rpc.define({
   id: "ohmycode.account",
   methods: {
     get: { input: Schema.Struct({}), output: LamaAccount },
+    refresh: { input: Schema.Struct({}), output: Schema.Struct({ updated: Schema.Boolean }) },
     transcribe: {
       input: Schema.Struct({ file: Schema.String }),
       output: Schema.Struct({ text: Schema.String, error: Schema.optional(Schema.String) }),

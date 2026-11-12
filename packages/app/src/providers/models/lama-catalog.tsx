@@ -1,6 +1,9 @@
-import { useQuery } from "@tanstack/solid-query"
+import { useQuery, useQueryClient } from "@tanstack/solid-query"
 import { Schema } from "effect"
-import { createContext, createSignal, onCleanup, useContext, type ParentProps } from "solid-js"
+import { createContext, createSignal, onCleanup, useContext, type Accessor, type ParentProps } from "solid-js"
+import { LamaAccountRpc } from "@opencode/schema/lama-account"
+import { useServerSDK } from "@/runtime/server/client"
+import { useData } from "@/runtime/server/current"
 
 const Amount = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))
 
@@ -43,8 +46,12 @@ export function lamaStatus(health: typeof Health.Type | undefined) {
   return "up"
 }
 
-async function get(path: string) {
-  const response = await fetch(`https://ohmylama.ru/api/${path}`, { signal: AbortSignal.timeout(10_000) })
+async function get(path: string, force = false) {
+  const response = await fetch(`https://ohmylama.ru/api/${path}`, {
+    cache: force ? "no-store" : undefined,
+    headers: force ? { "Cache-Control": "no-cache", Pragma: "no-cache" } : undefined,
+    signal: AbortSignal.timeout(10_000),
+  })
 
   if (!response.ok) throw new Error(`LAMA catalog: HTTP ${response.status}`)
 
@@ -52,9 +59,10 @@ async function get(path: string) {
 }
 
 function createCatalog() {
+  let forceNext = false
   const prices = useQuery(() => ({
     queryKey: ["lama", "prices"],
-    queryFn: async () => Schema.decodeUnknownSync(Prices)(await get("models/prices")),
+    queryFn: async () => Schema.decodeUnknownSync(Prices)(await get("models/prices", forceNext)),
     staleTime: 300_000,
     refetchInterval: 300_000,
     retry: 1,
@@ -62,7 +70,7 @@ function createCatalog() {
 
   const status = useQuery(() => ({
     queryKey: ["lama", "status"],
-    queryFn: async () => Schema.decodeUnknownSync(Status)(await get("status")),
+    queryFn: async () => Schema.decodeUnknownSync(Status)(await get("status", forceNext)),
     staleTime: 60_000,
     refetchInterval: 60_000,
     retry: 1,
@@ -80,6 +88,15 @@ function createCatalog() {
 
       return lamaStatus(status.data?.models[model])
     },
+    refetch: async () => {
+      forceNext = true
+      try {
+        await Promise.allSettled([prices.refetch(), status.refetch()])
+      } finally {
+        forceNext = false
+      }
+      setNow(Date.now())
+    },
   }
 }
 
@@ -90,3 +107,41 @@ export function LamaCatalogProvider(props: ParentProps) {
 }
 
 export const useLamaCatalog = () => useContext(Context)
+
+export function useLamaModelRefresh(directory: Accessor<string | undefined>) {
+  const sdk = useServerSDK()
+  const data = useData()
+  const catalog = useLamaCatalog()
+  const queryClient = useQueryClient()
+  const [refreshing, setRefreshing] = createSignal(false)
+
+  const refresh = async () => {
+    if (refreshing()) return
+    setRefreshing(true)
+    try {
+      const dir = directory()
+      const ref = dir ? { directory: dir } : undefined
+      await sdk.api.rpc
+        .call({
+          rpcID: LamaAccountRpc.id,
+          method: "refresh",
+          input: {},
+          ...(ref ? { location: ref } : {}),
+        })
+        .catch(() => undefined)
+      const resolved = ref ?? data.location.default()
+      data.location.provider.invalidate(resolved)
+      data.location.model.invalidate(resolved)
+      await Promise.allSettled([
+        data.location.provider.sync(resolved),
+        data.location.model.sync(resolved),
+        catalog?.refetch(),
+        queryClient.invalidateQueries({ queryKey: ["lama", "account", sdk.url] }),
+      ])
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  return { refreshing, refresh }
+}

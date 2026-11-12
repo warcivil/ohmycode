@@ -1,10 +1,14 @@
 import { useFilteredList } from "@opencode/ui/hooks"
+import { Icon } from "@opencode/ui/icon"
+import { IconButton } from "@opencode/ui/icon-button"
 import { Switch } from "@opencode/ui/switch"
+import { Tooltip } from "@opencode/ui/tooltip"
 import { type Component, createEffect, createMemo, For, Show } from "solid-js"
 
 import { Schema } from "effect"
 import { Persistence } from "@/runtime/persistence/schema"
 import { useLanguage } from "@/runtime/i18n/language"
+import { useLamaModelRefresh } from "@/providers/models/lama-catalog"
 import { useModels } from "@/providers/models/models"
 import { useServerSDK } from "@/runtime/server/client"
 import { popularProviders } from "@/providers/catalog/providers"
@@ -31,6 +35,7 @@ export const SettingsModels: Component<{
   const language = useLanguage()
   const models = useModels()
   const serverSdk = useServerSDK()
+  const lama = useLamaModelRefresh(() => models.directory())
 
   const [store, setStore] = persisted(
     Persist.serverGlobal(serverSdk.scope, "settings-v2.models.providers"),
@@ -146,6 +151,24 @@ export const SettingsModels: Component<{
             <h2 class="settings-tab-title">{language.t("settings.models.title")}</h2>
             <span class="text-11-regular text-v2-text-text-muted">{language.t("settings.models.description")}</span>
           </div>
+          <Tooltip value={language.t("lama.models.refresh")}>
+            <IconButton
+              type="button"
+              variant="ghost-muted"
+              size="normal"
+              class="shrink-0 cursor-pointer"
+              disabled={lama.refreshing()}
+              onClick={() => void lama.refresh()}
+              aria-label={language.t("lama.models.refresh")}
+              icon={
+                <Icon
+                  name="outline-rotate-clockwise"
+                  size="small"
+                  classList={{ "animate-spin": lama.refreshing() }}
+                />
+              }
+            />
+          </Tooltip>
         </div>
         <SettingsSearchField
           value={list.filter()}

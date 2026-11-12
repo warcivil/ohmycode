@@ -58,9 +58,14 @@ export function createLamaDiscovery(file: string, endpoint = "https://ohmylama.r
       state.revision = state.catalog?.revision ?? ""
       return state.catalog
     },
-    async refresh() {
+    async refresh(options?: { force?: boolean }) {
       const response = await fetch(endpoint, {
-        headers: state.revision ? { "If-None-Match": `"${state.revision}"` } : {},
+        cache: options?.force ? "no-store" : undefined,
+        headers: options?.force
+          ? { "Cache-Control": "no-cache", Pragma: "no-cache" }
+          : state.revision
+            ? { "If-None-Match": `"${state.revision}"` }
+            : {},
         signal: AbortSignal.timeout(5000),
       })
       if (response.status === 304) return

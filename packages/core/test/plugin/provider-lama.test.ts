@@ -3,6 +3,7 @@ import { expect, test } from "bun:test"
 import { Effect, Schedule } from "effect"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
+import { Model } from "@opencode/core/model"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { LamaPlugin, lamaModels } from "@opencode/core/plugin/provider/lama"
@@ -145,9 +146,11 @@ it.live("account RPC uses the active credential and never returns its secret", (
       ]
       globalThis.fetch = Object.assign(
         async (input: string | URL | Request, init?: RequestInit) => {
-          if (String(input).endsWith("/api/models/desktop")) return new Response(null, { status: 503 })
-          expect(String(input)).toBe("https://ohmylama.ru/v1/account")
-          authorization.push(new Headers(init?.headers).get("Authorization") ?? "")
+          const url = input instanceof Request ? input.url : String(input)
+          if (url.endsWith("/api/models/desktop")) return new Response(null, { status: 503 })
+          expect(url).toBe("https://ohmylama.ru/v1/account")
+          const headers = input instanceof Request ? input.headers : new Headers(init?.headers)
+          authorization.push(headers.get("Authorization") ?? "")
           return replies.shift() ?? new Response(null, { status: 500 })
         },
         { preconnect: original.preconnect },
@@ -191,6 +194,73 @@ it.live("account RPC uses the active credential and never returns its secret", (
           "Bearer sk-lama-first",
           "Bearer sk-lama-first",
         ])
+      }),
+    ({ original }) =>
+      Effect.sync(() => {
+        globalThis.fetch = original
+      }),
+  ),
+)
+
+it.live("account refresh RPC bypasses HTTP cache and reloads newly verified models", () =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const original = globalThis.fetch
+      const headers: Array<Record<string, string | null>> = []
+      let ready = false
+      globalThis.fetch = Object.assign(
+        async (input: string | URL | Request, init?: RequestInit) => {
+          const url = input instanceof Request ? input.url : String(input)
+          if (url.endsWith("/api/models/desktop")) {
+            const h = input instanceof Request ? input.headers : new Headers(init?.headers)
+            headers.push({
+              cacheControl: h.get("cache-control"),
+              ifNoneMatch: h.get("if-none-match"),
+            })
+            if (!ready) return new Response(null, { status: 503 })
+            return Response.json({
+              schema_version: 1,
+              revision: "c".repeat(64),
+              models: [
+                {
+                  id: "fresh-verified-model",
+                  name: "Fresh Verified Model",
+                  status: "active",
+                  input: ["text"],
+                  output: ["text"],
+                  tools: true,
+                  reasoning: { supported: false, effort: [] },
+                  files: { text: "tools", native: [] },
+                  limits: { context: 128000, output: 16384 },
+                  pricing: { currency: "USD", unit: "million_tokens", input: 0.5, output: 1.5, cache_read: 0.1, cache_write: 0.5 },
+                },
+              ],
+            })
+          }
+          throw new Error(`Unexpected fetch: ${url}`)
+        },
+        { preconnect: original.preconnect },
+      )
+      return { original, headers, enable: () => (ready = true) }
+    }),
+    ({ headers, enable }) =>
+      Effect.gen(function* () {
+        const plugin = yield* Plugin.Service
+        yield* LamaPlugin.effect(yield* PluginHost.make(plugin))
+        const rpc = yield* Rpc.Service
+        const models = yield* Model.Service
+        const credentials = yield* Credential.Service
+        yield* credentials.create({
+          integrationID,
+          label: "lama",
+          value: Credential.Key.make({ type: "key", key: "sk-lama-refresh" }),
+        })
+        enable()
+        const result = yield* rpc.call("ohmycode.account", "refresh", {})
+        expect(result).toEqual({ updated: true })
+        expect(headers.at(-1)).toEqual({ cacheControl: "no-cache", ifNoneMatch: null })
+        const available = yield* models.all()
+        expect(available.some((m) => m.id === "fresh-verified-model")).toBe(true)
       }),
     ({ original }) =>
       Effect.sync(() => {

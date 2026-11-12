@@ -3,12 +3,15 @@ import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
 import { Switch } from "@opencode/ui/switch"
 import { TextInput } from "@opencode/ui/text-input"
+import { Tooltip } from "@opencode/ui/tooltip"
 import { useFilteredList } from "@opencode/ui/hooks"
 import { createMemo, For, Show, type Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLocal } from "@/providers/models/selection"
+import { useLamaModelRefresh } from "@/providers/models/lama-catalog"
 import { popularProviders } from "@/providers/catalog/providers"
 import { useLanguage } from "@/runtime/i18n/language"
+import { decode64 } from "@/runtime/persistence/base64"
 import { SettingsList } from "@/settings/list"
 import { SettingsRow } from "@/settings/row"
 import { consoleModelGroup, ProviderModelSections } from "@/providers/models/provider-group"
@@ -19,6 +22,7 @@ type ModelItem = ReturnType<ReturnType<typeof useLocal>["model"]["list"]>[number
 export const DialogManageModels: Component = () => {
   const local = useLocal()
   const language = useLanguage()
+  const lama = useLamaModelRefresh(() => decode64(local.slug()))
   const [store, setStore] = createStore<{ collapsed: Record<string, boolean> }>({ collapsed: {} })
   const providerList = (providerID: string) => local.model.list().filter((x) => x.provider.id === providerID)
 
@@ -90,6 +94,24 @@ export const DialogManageModels: Component = () => {
           title={language.t("dialog.model.manage")}
           description={language.t("dialog.model.manage.description")}
         />
+        <Tooltip value={language.t("lama.models.refresh")}>
+          <IconButton
+            type="button"
+            variant="ghost-muted"
+            size="small"
+            class="me-1.5 -mt-0.5 shrink-0 cursor-pointer"
+            disabled={lama.refreshing()}
+            onClick={() => void lama.refresh()}
+            aria-label={language.t("lama.models.refresh")}
+            icon={
+              <Icon
+                name="outline-rotate-clockwise"
+                size="small"
+                classList={{ "animate-spin": lama.refreshing() }}
+              />
+            }
+          />
+        </Tooltip>
       </DialogHeader>
       <DialogBody class="flex min-h-0 flex-1 flex-col">
         <div class="px-4 pt-px pb-3">
