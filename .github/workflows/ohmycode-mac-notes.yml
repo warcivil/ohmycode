@@ -1,40 +1,44 @@
-name: OhMyCode experimental macOS release notes
+name: Publish verified OhMyCode macOS packages
 on:
   push:
-    branches: [extra-platforms]
+    branches: [focus-release]
     paths: [".github/workflows/ohmycode-mac-notes.yml"]
-  workflow_dispatch:
 permissions:
-  contents: write
   actions: read
+  contents: write
 jobs:
-  notes:
+  publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN: '44395047937'
+      TAG: ohmycode-2.0.24-ohmycode.33-experimental
     steps:
-      - name: Describe platform verification
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+      - name: Verify source and download signed builds
         run: |
-          cat > notes.txt <<'NOTES'
-          Экспериментальные сборки OhMyCode 2.0.24-ohmycode.32 для macOS.
-
-          Intel: проверены подпись приложения и запуск встроенного ядра на Intel-раннере.
-          Apple Silicon: пакет собирается на Intel-раннере с проверкой архитектуры ARM64 и подписи. Запуск на M-чипе ещё не проверен; файл появится в загрузках после успешной сборки.
-
-          Подпись ad-hoc, без Developer ID и нотариализации Apple. Полноценная проверка интерфейса на пользовательских Mac ещё нужна. Встроенное автообновление macOS отключено: новые версии устанавливаются вручную из .dmg.
-          NOTES
-          gh release edit ohmycode-2.0.24-ohmycode.32-experimental --notes-file notes.txt
-      - name: Report cross-build error
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          set -euo pipefail
+          gh run watch "$BUILD_RUN" --repo "$GH_REPO" || true
+          sha=$(gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" --jq .head_sha)
+          test "$sha" = "$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha)"
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN/jobs" > jobs.json
+          for arch in x64 arm64; do
+            jq -e --arg job "mac (macos-26-intel, $arch)" '.jobs[]|select(.name==$job)|[.steps[]|select(.name=="Verify bundled CLI and signature" or .name=="Save test packages only")|.conclusion]==["success","success"]' jobs.json
+            gh run download "$BUILD_RUN" --repo "$GH_REPO" --name "ohmycode-macos-test-$arch" --dir "assets/$arch"
+            (cd "assets/$arch"; sha256sum -c "SHA256SUMS-macos-$arch.txt")
+          done
+      - name: Publish experimental downloads
         run: |
-          gh run view 43264436331 --log-failed > failed-build.log
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          lines=Path('failed-build.log').read_text().splitlines()
-          selected=[x for x in lines if any(word in x for word in ['error:', 'Error:', 'Cannot', 'Could not', 'ENOENT', 'failed', 'Unknown', 'not found', 'Unsupported'])][-25:]
-          message='\n'.join(selected or lines[-30:])
-          print('::notice title=Apple Silicon build diagnostic::'+message.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
-          PYTHON
+          set -euo pipefail
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --prerelease --title "OhMyCode 2.0.24-ohmycode.33 — experimental macOS" --notes 'Исправлены прокрутка и возврат курсора в диалогах. Intel — проверены подпись и запуск ядра. Для Apple Silicon проверены архитектура и подпись. Запуск на M-чипе ещё не проверен. Подпись ad-hoc, без нотариализации Apple.'
+          for f in assets/*/*; do
+            name=$(basename "$f")
+            if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+              mkdir -p verify
+              gh release download "$TAG" --pattern "$name" --dir verify
+              cmp "$f" "verify/$name"
+            else
+              gh release upload "$TAG" "$f"
+            fi
+          done
