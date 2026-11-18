@@ -308,8 +308,11 @@ export function createComposerEditor(input: {
   })
 
   const restoreFocus = (cursor = draft.state.cursor ?? promptLength(draft.state.prompt)) => {
+    const previous = document.activeElement
     requestAnimationFrame(() => {
-      editor?.focus()
+      if (!editor?.isConnected || (document.activeElement !== previous && document.activeElement !== document.body))
+        return
+      editor.focus({ preventScroll: true })
       setEditorCursor(editor, cursor)
     })
   }

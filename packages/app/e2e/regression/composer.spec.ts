@@ -335,3 +335,32 @@ test("shows thinking on hover or a non-default selection while preserving keyboa
   await page.keyboard.press("Tab")
   await expect(control).toHaveCSS("opacity", "0")
 })
+
+test("keeps focus in a dialog that replaces the model dialog and returns it to the composer caret", async ({
+  page,
+}) => {
+  const { editor } = await openSession(page, { name: "ComposerDialogFocus", provider: NO_PROVIDER })
+  await editor.fill("keep me")
+  await editor.press("End")
+  await editor.press("ArrowLeft")
+  await editor.press("ArrowLeft")
+  await editor.press("ArrowLeft")
+  await editor.press("ControlOrMeta+'")
+
+  const models = page.getByRole("dialog", { name: "Выбрать модель", exact: true })
+  await expect(models.getByRole("searchbox", { name: "Поиск моделей", exact: true })).toBeFocused()
+  await models.getByRole("button", { name: "Управление моделями", exact: true }).click()
+  await expect(models).toBeHidden()
+
+  const manage = page.getByRole("dialog", { name: "Управление моделями", exact: true })
+  const search = manage.getByRole("searchbox", { name: "Поиск моделей", exact: true })
+  await expect(search).toBeFocused()
+  // Code behind the dialog that focuses the composer must not pull focus out of the open dialog.
+  await editor.evaluate((element) => element.focus())
+  await expect(search).toBeFocused()
+  await page.keyboard.press("Escape")
+  await expect(manage).toBeHidden()
+  await expect(editor).toBeFocused()
+  await page.keyboard.type(",")
+  await expect(editor).toHaveText("keep, me")
+})

@@ -244,7 +244,9 @@ export function createActiveSessionRegion(input: {
     state,
     parentID: input.session.data.parentID,
     centered: input.screen.centered,
-    onResponseSubmit: input.timeline.actions.resume,
+    onResponseSubmit: () => {
+      if (input.timeline.view.pinned()) input.timeline.actions.resume()
+    },
     openParent,
     setPromptRef: (element: HTMLDivElement) => {
       promptRef = element

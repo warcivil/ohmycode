@@ -35,8 +35,11 @@ export function createSessionComposerController(input: {
       const target = editor
 
       if (!target) return
+      const previous = document.activeElement
       requestAnimationFrame(() => {
-        target.focus()
+        if (!target?.isConnected || (document.activeElement !== previous && document.activeElement !== document.body))
+          return
+        target.focus({ preventScroll: true })
         setCursorPosition(target, cursor)
       })
     },

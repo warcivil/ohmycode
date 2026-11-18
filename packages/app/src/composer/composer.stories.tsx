@@ -1,4 +1,5 @@
 import { Show, createMemo, onMount, type JSX } from "solid-js"
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { createStore } from "solid-js/store"
 import type { ModelSelection } from "@/providers/models/selection"
 import { STORY_MODEL, emptySessionDocument, pendingAndQueuedDocument } from "@opencode/session-ui/storybook"
@@ -231,7 +232,9 @@ function ComposerStory(props: {
       <output class="text-12-regular text-text-weak" aria-live="polite">
         {story.activity}
       </output>
-      <Composer model={model} borderUnderlay suggestionBoundary={props.suggestionBoundary} />
+      <QueryClientProvider client={new QueryClient()}>
+        <Composer model={model} borderUnderlay suggestionBoundary={props.suggestionBoundary} />
+      </QueryClientProvider>
     </div>
   )
 }

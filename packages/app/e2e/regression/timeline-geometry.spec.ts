@@ -546,6 +546,38 @@ for (const failed of [false, true]) {
   })
 }
 
+test("keeps a reader in place when they submit from earlier in the conversation", async ({ page }) => {
+  const messages = Array.from({ length: 40 }, (_, index) =>
+    userMessage(undefined, {
+      id: `msg_${String(index).padStart(4, "0")}_reader`,
+      created: 1690000000000 + index * 1000,
+    }),
+  )
+  await setupTimeline(page, { reducedMotion: true, seedHistory: true, messages })
+  const viewport = page.locator('[data-slot="session-timeline-scroll"] > [data-scrollable]')
+  const editor = page.locator('[data-component="composer"]').getByRole("textbox")
+  const top = () => viewport.evaluate((el) => el.scrollTop)
+  await expect(page.locator("[data-timeline-virtual-content]")).toHaveCSS("visibility", "visible")
+  await viewport.hover()
+  await page.mouse.wheel(0, -800)
+  const jump = page.getByRole("button", { name: "Перейти к последнему" })
+  await expect(jump).toBeInViewport()
+  await editor.fill("testing position")
+  const resting = await top()
+  const requested = page.waitForRequest(
+    (req) => req.method() === "POST" && new URL(req.url()).pathname === `/api/session/${sessionID}/prompt`,
+  )
+  await editor.press("Enter")
+  await requested
+  await expect(editor).toHaveText("")
+  await expect(jump).toBeInViewport()
+  expect(Math.abs((await top()) - resting)).toBeLessThanOrEqual(1)
+  await jump.click()
+  await expect(
+    page.locator('[data-timeline-row="UserMessage"]').filter({ hasText: "testing position" }),
+  ).toBeInViewport()
+})
+
 async function captureCardEdges(page: Page, card: Locator) {
   const box = await card.boundingBox()
 

@@ -33,11 +33,11 @@ export function PreparingComposer(props: { pending: PendingSession }) {
           if (document.activeElement !== element) return
           const cursor = pending.composer.cursor()
           requestAnimationFrame(() => {
-            if (location.pathname !== pathname) return
+            if (location.pathname !== pathname || document.activeElement !== document.body) return
             const next = document.querySelector<HTMLDivElement>('[data-component="composer-editor"]')
 
             if (!next || next === element) return
-            next.focus()
+            next.focus({ preventScroll: true })
             setCursorPosition(next, cursor ?? 0)
           })
         })

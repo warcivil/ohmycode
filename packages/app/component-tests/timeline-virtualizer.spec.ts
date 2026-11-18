@@ -106,3 +106,65 @@ for (const input of [
     }
   })
 }
+
+story("leaves a reader who scrolled up in place after a scroll to the zoomed end", async ({ page }) => {
+  // At 110% the reachable end falls outside the normal half-pixel tolerance.
+  await page.evaluate(async (fixture) => {
+    document.documentElement.style.zoom = "1.1"
+    const { mountTimelineVirtualizer } = await import(fixture)
+    mountTimelineVirtualizer({ count: 40, rowHeight: 59.3, immediate: true, viewportHeight: 200.5 })
+  }, fixture)
+  const root = page.getByTestId("timeline-virtualizer-fixture")
+  await root.getByRole("button", { name: "Complete Markdown", exact: true }).click()
+  await expect(root.locator("[data-timeline-virtual-content]")).toHaveCSS("visibility", "visible")
+  const viewport = root.locator("[data-scrollable]")
+  const distance = () => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)
+  expect(await distance()).toBeGreaterThan(0.5)
+
+  // A scroll command settles or scrolls again on its next frame.
+  const frames = () =>
+    page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+
+  await root.getByRole("button", { name: "Scroll to end", exact: true }).click()
+  await frames()
+  // The wheel and the scroll it causes arrive together. A wheel alone would leave an earlier arrival at the end free to
+  // pin again once that scroll settles.
+  await viewport.evaluate(
+    (element) =>
+      new Promise((resolve) => {
+        element.addEventListener("scroll", resolve, { once: true })
+        element.dispatchEvent(new WheelEvent("wheel", { deltaY: -1, bubbles: true }))
+        element.scrollTop -= 40
+      }),
+  )
+  await expect(root.getByTestId("timeline-controls")).toHaveAttribute("data-pinned", "false")
+  const height = await viewport.evaluate((element) => element.scrollHeight)
+  await root.getByRole("button", { name: "Grow last row", exact: true }).click()
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(height + 30)
+  await frames()
+  expect(await distance()).toBeGreaterThan(70)
+})
+
+story("dragging the scrollbar detaches a reader from the newest message", async ({ page }) => {
+  await page.evaluate(async (fixture) => {
+    const { mountTimelineVirtualizer } = await import(fixture)
+    mountTimelineVirtualizer({ count: 100, rowHeight: 60, immediate: true })
+  }, fixture)
+  const root = page.getByTestId("timeline-virtualizer-fixture")
+  await root.getByText("Complete Markdown", { exact: true }).click()
+  await expect(root.locator("[data-timeline-virtual-content]")).toHaveCSS("visibility", "visible")
+  const viewport = root.locator("[data-scrollable]")
+  await viewport.hover()
+  const thumb = root.locator('.scroll-view__thumb[data-orientation="vertical"]')
+  await thumb.hover()
+  await page.mouse.down()
+  await page.mouse.move(
+    ...(await thumb.evaluate((el): [number, number] => {
+      const rect = el.getBoundingClientRect()
+      return [rect.x + rect.width / 2, rect.y - 12]
+    })),
+    { steps: 4 },
+  )
+  await expect(root.getByTestId("timeline-controls")).toHaveAttribute("data-pinned", "false")
+  await page.mouse.up()
+})

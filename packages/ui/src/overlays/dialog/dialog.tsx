@@ -1,5 +1,13 @@
 import { CloseButton, Content, Description, Title } from "@kobalte/core/dialog"
-import { type ComponentProps, type JSXElement, type ParentProps, Show, children, createEffect, splitProps } from "solid-js"
+import {
+  type ComponentProps,
+  type JSXElement,
+  type ParentProps,
+  Show,
+  children,
+  createEffect,
+  splitProps,
+} from "solid-js"
 import { useDialogLayer } from "../../context/dialog"
 import { useI18n } from "../../context/i18n"
 import "./dialog.css"
@@ -120,12 +128,14 @@ export function Dialog(props: DialogProps) {
             [local.class ?? ""]: !!local.class,
           }}
           onOpenAutoFocus={(e) => {
-            const target = e.currentTarget as HTMLElement | null
-            const autofocusEl = target?.querySelector("[autofocus]") as HTMLElement | null
+            const autofocusEl =
+              e.currentTarget instanceof HTMLElement ? e.currentTarget.querySelector<HTMLElement>("[autofocus]") : null
 
             if (autofocusEl) {
               e.preventDefault()
-              autofocusEl.focus({ preventScroll: true })
+              // Kobalte attaches its focus trap after this event, so focusing now would leave the trap with no
+              // element to return to. Deferring, as Kobalte's own autofocus does, lets it pull stray focus back.
+              setTimeout(() => autofocusEl.focus({ preventScroll: true }))
             }
           }}
         >
