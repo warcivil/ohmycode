@@ -49,8 +49,10 @@ jobs:
           app=$(find packages/desktop/dist -maxdepth 2 -name '*.app' -type d | head -1)
           test -n "$app"
           cli="$app/Contents/Resources/opencode-cli"
-          test "$(lipo -archs "$cli")" = "${{ matrix.arch }}"
-          test "$(lipo -archs "$app/Contents/MacOS/OhMyCode")" = "${{ matrix.arch }}"
+          expected="${{ matrix.arch }}"
+          if [[ "$expected" == x64 ]]; then expected=x86_64; fi
+          test "$(lipo -archs "$cli")" = "$expected"
+          test "$(lipo -archs "$app/Contents/MacOS/OhMyCode")" = "$expected"
           codesign --verify --deep --strict "$app"
           if [[ "${{ matrix.arch }}" == x64 ]]; then test "$("$cli" --version)" = "opencode v$OPENCODE_VERSION"; fi
           file "$cli"
