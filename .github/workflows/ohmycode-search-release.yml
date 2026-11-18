@@ -1,10 +1,10 @@
-name: OhMyCode search release
+name: OhMyCode Windows release
 run-name: OhMyCode prod Windows x64 — ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
   push:
-    branches: [search-release]
+    branches: [focus-release]
     paths:
       - ".github/workflows/ohmycode-search-release.yml"
       - ".github/actions/setup-bun/**"
@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       OHMYCODE_BUILD_CHANNEL: prod
-      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.32
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.33
       OPENCODE_CHANNEL: prod
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       NODE_OPTIONS: --max-old-space-size=6144
@@ -118,4 +118,4 @@ jobs:
             packages/desktop/dist/SHA256SUMS-WINDOWS.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "OhMyCode $OHMYCODE_BUILD_VERSION" \
-            --notes 'Бесплатный встроенный веб-поиск, поддержка входа через сайт и API-ключа, фильтры источников и дат, обновление списка моделей без перезапуска. Проверена установка и запуск встроенного сервера Windows.'
+            --notes 'Исправлены прокрутка длинных диалогов и возврат курсора после выбора модели.'

@@ -1,12 +1,11 @@
 name: OhMyCode Apple Silicon cross build
 on:
   push:
-    branches: [extra-platforms]
+    branches: [focus-release]
     paths: [".github/workflows/ohmycode-arm-intel.yml"]
   workflow_dispatch:
 permissions:
   contents: write
-  actions: write
 jobs:
   mac:
     strategy:
@@ -15,21 +14,18 @@ jobs:
         include:
           - host: macos-26-intel
             arch: arm64
+          - host: macos-26-intel
+            arch: x64
     runs-on: ${{ matrix.host }}
     timeout-minutes: 45
     env:
       OHMYCODE_BUILD_CHANNEL: prod
-      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.32
+      OHMYCODE_BUILD_VERSION: 2.0.24-ohmycode.33
       OPENCODE_CHANNEL: prod
-      OPENCODE_VERSION: 2.0.24-ohmycode.32
+      OPENCODE_VERSION: 2.0.24-ohmycode.33
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
-      - name: Cancel unavailable ARM runner attempt
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh run cancel 43262999710 || true
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - uses: ./.github/actions/setup-bun
         with:
@@ -37,8 +33,10 @@ jobs:
       - name: Build desktop and native CLI
         run: |
           bun run build:ohmycode
-          bun packages/cli/script/build.ts --target=opencode-darwin-arm64 --skip-install --skip-web-ui
-          cp packages/cli/dist/cli-darwin-arm64/bin/opencode packages/desktop/resources/opencode-cli
+          if [[ "${{ matrix.arch }}" == arm64 ]]; then
+            bun packages/cli/script/build.ts --target=opencode-darwin-arm64 --skip-install --skip-web-ui
+            cp packages/cli/dist/cli-darwin-arm64/bin/opencode packages/desktop/resources/opencode-cli
+          fi
           test "$(cat packages/desktop/resources/opencode-cli.version)" = "$OPENCODE_VERSION"
 
       - name: Package test installers with ad-hoc signing
@@ -51,9 +49,10 @@ jobs:
           app=$(find packages/desktop/dist -maxdepth 2 -name '*.app' -type d | head -1)
           test -n "$app"
           cli="$app/Contents/Resources/opencode-cli"
-          test "$(lipo -archs "$cli")" = "arm64"
-          test "$(lipo -archs "$app/Contents/MacOS/OhMyCode")" = "arm64"
+          test "$(lipo -archs "$cli")" = "${{ matrix.arch }}"
+          test "$(lipo -archs "$app/Contents/MacOS/OhMyCode")" = "${{ matrix.arch }}"
           codesign --verify --deep --strict "$app"
+          if [[ "${{ matrix.arch }}" == x64 ]]; then test "$("$cli" --version)" = "opencode v$OPENCODE_VERSION"; fi
           file "$cli"
           python3 - <<'PY'
           import pathlib,hashlib
