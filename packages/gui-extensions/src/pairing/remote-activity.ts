@@ -1,7 +1,7 @@
 import { Option, Schema } from "effect"
 import type { SessionMessageInfo } from "@opencode/client/promise"
 
-const Calls = Schema.Array(Schema.Struct({ tool: Schema.String, status: Schema.String }))
+const Calls = Schema.Array(Schema.Struct({ tool: Schema.String, status: Schema.String, input: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)) }))
 
 const Labels: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "telegram_send_file": ["Отправляет файл в чат", "Отправил файл в чат", "Отправка файлов"],
@@ -29,13 +29,13 @@ export function remoteActivity(messages: ReadonlyArray<SessionMessageInfo>) {
     if (item.type !== "tool") return []
     const nested = item.state.status === "streaming" ? [] : Option.getOrElse(Schema.decodeUnknownOption(Calls)(item.state.metadata?.toolCalls), () => [])
 
-    return nested.length ? nested : [{ tool: item.name, status: item.state.status }]
+    return nested.length ? nested : [{ tool: item.name, status: item.state.status, input: item.state.status === "streaming" ? undefined : item.state.input }]
   }) : [])
 
   return describeActivity(calls)
 }
 
-export function describeActivity(calls: ReadonlyArray<{ tool: string; status: string }>) {
+export function describeActivity(calls: ReadonlyArray<{ tool: string; status: string; input?: Readonly<Record<string, unknown>> }>) {
   const counts = new Map<string, number>()
 
   for (const call of calls) {
@@ -51,5 +51,9 @@ export function describeActivity(calls: ReadonlyArray<{ tool: string; status: st
   const action = labels?.[active ? 0 : 1] || (last.tool.startsWith("browser.") ? "Работает с браузером" : "Выполняет инструменты")
   const state = last.status === "error" ? "Инструмент завершился с ошибкой. Агент обрабатывает результат." : action
 
-  return `${state}\nВызовы инструментов: ${[...counts].map(([label, count]) => `${label} × ${count}`).join(" · ")}`
+  let detail = ""
+  if (last.tool === "websearch" && typeof last.input?.query === "string") detail = last.input.query.trim().replace(/\s+/g, " ").slice(0, 120)
+  if (last.tool === "webfetch" && typeof last.input?.url === "string") detail = URL.parse(last.input.url)?.hostname || ""
+
+  return `${state}${detail ? " · " + detail : ""}\nВызовы инструментов: ${[...counts].map(([label, count]) => `${label} × ${count}`).join(" · ")}`
 }

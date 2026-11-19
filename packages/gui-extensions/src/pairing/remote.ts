@@ -350,12 +350,18 @@ export class RemoteControl {
 
       return {
         kind: "sessions",
-        sessions: sessions.data.map((row, index) => {
-          const title = row.title?.trim() || "Новый диалог"
-          const project = row.location?.directory?.split(/[\\/]/).filter(Boolean).at(-1)
-
-          return { id: row.id, title: `${index + 1}. ${title.slice(0, 90)}${project ? ` · ${project.slice(0, 45)}` : ""}` }
-        }),
+        sessions: await Promise.all(sessions.data.map(async (row, index) => {
+          let title = row.title?.trim() || "Новый диалог"
+          if (title === "Telegram" && row.id.startsWith("ses_remote_tg-")) {
+            const recent = await client.message.list({ sessionID: row.id, limit: 12, order: "asc" }, options).catch(() => undefined)
+            const first = recent?.data.find(message => message.type === "user")
+            const text = first?.type === "user" && first.text.split("Прикреплённый файл сохранён локально:")[0].trim().replace(/\s+/g, " ")
+            title = text || title
+          }
+          const day = new Date(row.time.updated).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+          const short = title.length > 46 ? (title.slice(0, 46).replace(/\s+\S*$/, "") || title.slice(0, 46)) + "…" : title
+          return { id: row.id, title: `${index + 1}. ${short} · ${day}` }
+        })),
       }
     }
 

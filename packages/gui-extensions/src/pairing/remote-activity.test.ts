@@ -8,6 +8,13 @@ describe("Telegram activity labels", () => {
     expect(describeActivity([{ tool: "browser.tabs.open", status: "error" }])).not.toContain("Открыл браузер")
   })
 
+  test("search details show the query and fetching shows only the host", () => {
+    expect(describeActivity([{ tool: "websearch", status: "running", input: { query: "новости  науки" } }])).toContain("Ищет в интернете · новости науки")
+    const fetch = describeActivity([{ tool: "webfetch", status: "running", input: { url: "https://example.org/private?token=secret" } }])
+    expect(fetch).toContain("Читает страницу · example.org")
+    expect(fetch).not.toContain("secret")
+  })
+
   test("counts actual tool calls and gives running work precedence", () => {
     const text = describeActivity([
       { tool: "webfetch", status: "completed" },
